@@ -62,14 +62,20 @@ class RemotePage extends StatefulWidget {
   final bool? isSharedPassword;
   final SimpleWrapper<State<RemotePage>?> _lastState = SimpleWrapper(null);
   final DesktopTabController? tabController;
-  final Rx<FFI?> ffiRx = Rx<FFI?>(null);
 
-  FFI? get ffiOrNull => ffiRx.value;
-  FFI get ffi =>
-      ffiRx.value ??
-      (_lastState.value != null
-          ? (_lastState.value as _RemotePageState)._ffi
-          : null)!;
+  FFI? get ffiOrNull {
+    final state = _lastState.value;
+    if (state is _RemotePageState) {
+      try {
+        return state._ffi;
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  FFI get ffi => ffiOrNull ?? (_lastState.value as _RemotePageState)._ffi;
 
   void releaseMacOSInputForTabTransfer() {
     if (!isMacOS) return;
@@ -157,7 +163,6 @@ class _RemotePageState extends State<RemotePage>
   void initState() {
     super.initState();
     _ffi = FFI(widget.sessionId);
-    widget.ffiRx.value = _ffi;
     if (isMacOS) {
       // SchedulerBinding.instance.lifecycleState is null in the first connection in a new window.
       _macOSLifecycleState = SchedulerBinding.instance.lifecycleState;
@@ -646,7 +651,6 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   Future<void> dispose() async {
-    widget.ffiRx.value = null;
     final closeSession = closeSessionOnDispose.remove(widget.id) ?? true;
 
     // https://github.com/flutter/flutter/issues/64935
@@ -778,21 +782,15 @@ class _RemotePageState extends State<RemotePage>
                       }
                     }(),
               // Use Overlay to enable rebuild every time on menu button click.
-              // Hide floating dropdown toolbar when relative mouse mode is active or when
-              // in windowed mode (actions are placed directly in the top header bar next to NewSessionChip).
-              Obx(() {
-                if (_ffi.inputModel.relativeMouseMode.value) {
-                  return const Offstage();
-                }
-                if (!stateGlobal.fullscreen.value) {
-                  return const Offstage();
-                }
-                return _ffi.ffiModel.pi.isSet.isTrue
-                    ? Overlay(initialEntries: [
-                        OverlayEntry(builder: remoteToolbar)
-                      ])
-                    : remoteToolbar(context);
-              }),
+              // Hide toolbar when relative mouse mode is active to prevent
+              // cursor from escaping to toolbar area.
+              Obx(() => _ffi.inputModel.relativeMouseMode.value
+                  ? const Offstage()
+                  : _ffi.ffiModel.pi.isSet.isTrue
+                      ? Overlay(initialEntries: [
+                          OverlayEntry(builder: remoteToolbar)
+                        ])
+                      : remoteToolbar(context)),
               _ffi.ffiModel.pi.isSet.isFalse ? emptyOverlay() : Offstage(),
             ],
           ),

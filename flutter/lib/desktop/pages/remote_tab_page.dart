@@ -68,7 +68,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
       tabController.onSelected = (id) {
         final remotePage = tabController.widget(id);
         if (remotePage is RemotePage) {
-          final ffi = remotePage.ffi;
+          final ffi = remotePage.ffiOrNull;
           if (ffi != null) {
             bind.setCurSessionId(sessionId: ffi.sessionId);
           }
@@ -141,7 +141,6 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _RelativeMouseModeHint(tabController: tabController),
-            RemoteHeaderActions(tabController: tabController),
             const NewSessionChip(),
           ],
         ),
