@@ -262,14 +262,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                     ),
                                   ),
                                   const SizedBox(width: 5),
-                                  Text(
-                                    isReady
-                                        ? translate('Ready')
-                                        : translate('not_ready_status'),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: textColor?.withOpacity(0.65),
-                                      fontWeight: FontWeight.w500,
+                                  Expanded(
+                                    child: Text(
+                                      isReady
+                                          ? translate('Ready')
+                                          : translate('not_ready_status'),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: textColor?.withOpacity(0.65),
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ],
