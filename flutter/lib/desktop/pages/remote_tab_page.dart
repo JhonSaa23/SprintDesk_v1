@@ -69,7 +69,9 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
         final remotePage = tabController.widget(id);
         if (remotePage is RemotePage) {
           final ffi = remotePage.ffi;
-          bind.setCurSessionId(sessionId: ffi.sessionId);
+          if (ffi != null) {
+            bind.setCurSessionId(sessionId: ffi.sessionId);
+          }
         }
         WindowController.fromWindowId(params['windowId'])
             .setTitle(getWindowNameWithId(id));

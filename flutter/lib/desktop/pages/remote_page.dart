@@ -62,14 +62,23 @@ class RemotePage extends StatefulWidget {
   final bool? isSharedPassword;
   final SimpleWrapper<State<RemotePage>?> _lastState = SimpleWrapper(null);
   final DesktopTabController? tabController;
+  final Rx<FFI?> ffiRx = Rx<FFI?>(null);
 
-  FFI get ffi => (_lastState.value! as _RemotePageState)._ffi;
+  FFI? get ffiOrNull => ffiRx.value;
+  FFI get ffi =>
+      ffiRx.value ??
+      (_lastState.value != null
+          ? (_lastState.value as _RemotePageState)._ffi
+          : null)!;
 
   void releaseMacOSInputForTabTransfer() {
     if (!isMacOS) return;
     // Release before removing the source tab. Its delayed disposal must not
     // disable a native keyboard hook already acquired by the destination page.
-    (_lastState.value! as _RemotePageState)._releaseMacOSRemoteInput();
+    final state = _lastState.value;
+    if (state is _RemotePageState) {
+      state._releaseMacOSRemoteInput();
+    }
   }
 
   @override
@@ -148,6 +157,7 @@ class _RemotePageState extends State<RemotePage>
   void initState() {
     super.initState();
     _ffi = FFI(widget.sessionId);
+    widget.ffiRx.value = _ffi;
     if (isMacOS) {
       // SchedulerBinding.instance.lifecycleState is null in the first connection in a new window.
       _macOSLifecycleState = SchedulerBinding.instance.lifecycleState;
@@ -636,6 +646,7 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   Future<void> dispose() async {
+    widget.ffiRx.value = null;
     final closeSession = closeSessionOnDispose.remove(widget.id) ?? true;
 
     // https://github.com/flutter/flutter/issues/64935

@@ -3811,7 +3811,8 @@ class RemoteHeaderActions extends StatelessWidget {
       }
       final page = tabState.tabs[index].page;
       if (page is! RemotePage) return const SizedBox.shrink();
-      final ffi = page.ffi;
+      final ffi = page.ffiRx.value;
+      if (ffi == null) return const SizedBox.shrink();
       final id = page.id;
       final toolbarState = page.toolbarState;
       final pi = ffi.ffiModel.pi;
