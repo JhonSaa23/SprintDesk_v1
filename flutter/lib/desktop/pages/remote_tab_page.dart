@@ -141,6 +141,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _RelativeMouseModeHint(tabController: tabController),
+            RemoteHeaderActions(tabController: tabController),
             const NewSessionChip(),
           ],
         ),
