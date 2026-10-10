@@ -658,7 +658,6 @@ class _RemotePageState extends State<RemotePage>
 
   @override
   Future<void> dispose() async {
-    widget.ffiRx.value = null;
     final closeSession = closeSessionOnDispose.remove(widget.id) ?? true;
 
     // https://github.com/flutter/flutter/issues/64935
