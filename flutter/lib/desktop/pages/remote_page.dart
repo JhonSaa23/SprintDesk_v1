@@ -767,15 +767,21 @@ class _RemotePageState extends State<RemotePage>
                       }
                     }(),
               // Use Overlay to enable rebuild every time on menu button click.
-              // Hide toolbar when relative mouse mode is active to prevent
-              // cursor from escaping to toolbar area.
-              Obx(() => _ffi.inputModel.relativeMouseMode.value
-                  ? const Offstage()
-                  : _ffi.ffiModel.pi.isSet.isTrue
-                      ? Overlay(initialEntries: [
-                          OverlayEntry(builder: remoteToolbar)
-                        ])
-                      : remoteToolbar(context)),
+              // Hide floating dropdown toolbar when relative mouse mode is active or when
+              // in windowed mode (actions are placed directly in the top header bar next to NewSessionChip).
+              Obx(() {
+                if (_ffi.inputModel.relativeMouseMode.value) {
+                  return const Offstage();
+                }
+                if (!stateGlobal.fullscreen.value) {
+                  return const Offstage();
+                }
+                return _ffi.ffiModel.pi.isSet.isTrue
+                    ? Overlay(initialEntries: [
+                        OverlayEntry(builder: remoteToolbar)
+                      ])
+                    : remoteToolbar(context);
+              }),
               _ffi.ffiModel.pi.isSet.isFalse ? emptyOverlay() : Offstage(),
             ],
           ),

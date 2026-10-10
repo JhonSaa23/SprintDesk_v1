@@ -139,7 +139,8 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _RelativeMouseModeHint(tabController: tabController),
-            const AddButton(),
+            RemoteHeaderActions(tabController: tabController),
+            const NewSessionChip(),
           ],
         ),
         selectedBorderColor: MyTheme.accent,

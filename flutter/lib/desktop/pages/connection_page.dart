@@ -109,33 +109,45 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
           ),
         );
 
-    basicWidget() => Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              height: 8,
-              width: 8,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: _svcStopped.value ||
-                        stateGlobal.svcStatus.value == SvcStatus.connecting
-                    ? kColorWarn
-                    : (stateGlobal.svcStatus.value == SvcStatus.ready
-                        ? Color.fromARGB(255, 50, 190, 166)
-                        : Color.fromARGB(255, 224, 79, 95)),
-              ),
-            ).marginSymmetric(horizontal: em),
-            Container(
-              width: isIncomingOnly ? 226 : null,
-              child: _buildConnStatusMsg(),
+    basicWidget() {
+      final isReady = stateGlobal.svcStatus.value == SvcStatus.ready && !_svcStopped.value;
+      final dotColor = _svcStopped.value ||
+              stateGlobal.svcStatus.value == SvcStatus.connecting
+          ? kColorWarn
+          : (isReady
+              ? const Color(0xFF10B981)
+              : const Color(0xFFEF4444));
+
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            height: 8,
+            width: 8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              color: dotColor,
+              boxShadow: [
+                BoxShadow(
+                  color: dotColor.withOpacity(0.55),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
-            // stop
-            if (!isIncomingOnly) startServiceWidget(),
-            // ready && public
-            // No need to show the guide if is custom client.
-            if (!isIncomingOnly) setupServerWidget(),
-          ],
-        );
+          ).marginSymmetric(horizontal: em),
+          Container(
+            width: isIncomingOnly ? 226 : null,
+            child: _buildConnStatusMsg(),
+          ),
+          // stop
+          if (!isIncomingOnly) startServiceWidget(),
+          // ready && public
+          // No need to show the guide if is custom client.
+          if (!isIncomingOnly) setupServerWidget(),
+        ],
+      );
+    }
 
     return Container(
       height: height,
@@ -309,11 +321,6 @@ class _ConnectionPageState extends State<ConnectionPage>
         Expanded(
             child: Column(
           children: [
-            Row(
-              children: [
-                Flexible(child: _buildRemoteIDTextField(context)),
-              ],
-            ).marginOnly(top: 22),
             SizedBox(height: 12),
             Divider().paddingOnly(right: 12),
             Expanded(child: PeerTabPage()),
@@ -344,15 +351,27 @@ class _ConnectionPageState extends State<ConnectionPage>
   /// Search for a peer.
   Widget _buildRemoteIDTextField(BuildContext context) {
     var w = Container(
-      width: 320 + 20 * 2,
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      width: 340 + 20 * 2,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(13)),
-          border: Border.all(color: Theme.of(context).colorScheme.background)),
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.06),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.14),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Ink(
         child: Column(
           children: [
-            getConnectionPageTitle(context, false).marginOnly(bottom: 15),
+            getConnectionPageTitle(context, false).marginOnly(bottom: 14),
             Row(
               children: [
                 Expanded(
@@ -421,20 +440,78 @@ class _ConnectionPageState extends State<ConnectionPage>
                           focusNode: fieldFocusNode,
                           style: const TextStyle(
                             fontFamily: 'WorkSans',
-                            fontSize: 22,
-                            height: 1.4,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                            height: 1.3,
                           ),
                           maxLines: 1,
-                          cursorColor:
-                              Theme.of(context).textTheme.titleLarge?.color,
+                          cursorColor: MyTheme.accent,
                           decoration: InputDecoration(
-                              filled: false,
-                              counterText: '',
-                              hintText: _idInputFocused.value
-                                  ? null
-                                  : translate('Enter Remote ID'),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 15, vertical: 13)),
+                            isDense: true,
+                            filled: true,
+                            fillColor: Theme.of(context)
+                                .scaffoldBackgroundColor
+                                .withOpacity(0.65),
+                            counterText: '',
+                            hintText: _idInputFocused.value
+                                ? null
+                                : translate('Enter Remote ID'),
+                            hintStyle: TextStyle(
+                              fontSize: 15,
+                              letterSpacing: 0,
+                              fontWeight: FontWeight.normal,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.color
+                                  ?.withOpacity(0.35),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.keyboard_alt_outlined,
+                              size: 18,
+                              color: MyTheme.accent,
+                            ),
+                            suffixIcon: _idController.text.isNotEmpty
+                                ? InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      _idController.id = '';
+                                      fieldTextEditingController.clear();
+                                    },
+                                    child: Icon(
+                                      Icons.cancel_rounded,
+                                      size: 16,
+                                      color: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.color
+                                          ?.withOpacity(0.4),
+                                    ),
+                                  )
+                                : null,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 11),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.08),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.white.withOpacity(0.08),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(
+                                color: MyTheme.accent,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
                           controller: fieldTextEditingController,
                           inputFormatters: [IDTextInputFormatter()],
                           onChanged: (v) {
@@ -519,20 +596,46 @@ class _ConnectionPageState extends State<ConnectionPage>
               padding: const EdgeInsets.only(top: 13.0),
               child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 SizedBox(
-                  height: 28.0,
+                  height: 32.0,
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MyTheme.accent,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shadowColor: MyTheme.accent.withOpacity(0.35),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
                     onPressed: () {
                       onConnect();
                     },
-                    child: Text(translate("Connect")),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.arrow_forward_rounded, size: 15),
+                        const SizedBox(width: 6),
+                        Text(
+                          translate("Connect"),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(
-                  height: 28.0,
-                  width: 28.0,
+                  height: 32.0,
+                  width: 32.0,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
+                    color: Theme.of(context)
+                        .scaffoldBackgroundColor
+                        .withOpacity(0.65),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(

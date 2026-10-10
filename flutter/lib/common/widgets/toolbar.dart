@@ -644,8 +644,11 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
 
 Future<List<TRadioMenu<String>>> toolbarViewStyle(
     BuildContext context, String id, FFI ffi) async {
-  final groupValue =
+  var groupValue =
       await bind.sessionGetViewStyle(sessionId: ffi.sessionId) ?? '';
+  if (groupValue.isEmpty) {
+    groupValue = kRemoteViewStyleAdaptive;
+  }
   void onChanged(String? value) async {
     if (value == null) return;
     bind

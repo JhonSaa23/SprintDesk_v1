@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'dart:math';
 
 import 'package:back_button_interceptor/back_button_interceptor.dart';
@@ -868,6 +869,10 @@ class OverlayDialogManager {
             innerClicked = false;
           },
           child: Container(
+              color: Colors.transparent,
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                child: Container(
               color: Theme.of(context).brightness == Brightness.light
                   ? Colors.black12
                   : Colors.black45,
@@ -876,7 +881,7 @@ class OverlayDialogManager {
                   onPointerUp: (_) => innerClicked = true,
                   child: builder(setState, close, overlayState.context),
                 );
-              })));
+              })))));
     });
     overlayState.insert(dialog.entry!);
     BackButtonInterceptor.add((stopDefaultButtonEvent, routeInfo) {
@@ -913,7 +918,11 @@ class OverlayDialogManager {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 30),
-                  const Center(child: CircularProgressIndicator()),
+                  const Center(
+                      child: SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: CircularProgressIndicator(strokeWidth: 3))),
                   const SizedBox(height: 20),
                   Center(
                       child: Text(translate(text),
@@ -1115,6 +1124,15 @@ class CustomAlertDialog extends StatelessWidget {
         return KeyEventResult.ignored;
       },
       child: AlertDialog(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1C1C22).withOpacity(0.55)
+              : Colors.white.withOpacity(0.6),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(color: Colors.white.withOpacity(0.18), width: 1),
+          ),
           scrollable: true,
           title: title,
           content: ConstrainedBox(
@@ -1352,6 +1370,11 @@ Widget msgboxIcon(String type) {
 // title should be null
 Widget msgboxContent(String type, String title, String text) {
   String translateText(String text) {
+    if (text.startsWith('WebRTC failed: ') && text.contains('; ')) {
+      return text.split('; ').map((part) {
+        return part.split(': ').map(translate).join(': ');
+      }).join('; ');
+    }
     if (text.indexOf('Failed') == 0 && text.indexOf(': ') > 0) {
       List<String> words = text.split(': ');
       for (var i = 0; i < words.length; ++i) {

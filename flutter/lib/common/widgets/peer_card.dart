@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:bot_toast/bot_toast.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
@@ -15,6 +17,28 @@ import '../../models/platform_model.dart';
 import '../../desktop/widgets/material_mod_popup_menu.dart' as mod_menu;
 import '../../desktop/widgets/popup_menu.dart';
 import 'dart:math' as math;
+
+String getThumbnailPath(String peerId) {
+  String base;
+  if (Platform.isWindows) {
+    base = Platform.environment['APPDATA'] ?? '';
+    if (base.isNotEmpty) base = '$base\\RustDesk';
+  } else {
+    final home = Platform.environment['HOME'] ?? '';
+    base = '$home/.config/rustdesk';
+  }
+  return '$base/thumbnails/$peerId.png';
+}
+
+File? getPeerThumbnail(String peerId) {
+  try {
+    final file = File(getThumbnailPath(peerId));
+    if (file.existsSync()) {
+      return file;
+    }
+  } catch (_) {}
+  return null;
+}
 
 typedef PopupMenuEntryBuilder = Future<List<mod_menu.PopupMenuEntry<String>>>
     Function(BuildContext);
@@ -95,7 +119,7 @@ class _PeerCardState extends State<_PeerCard>
     final peer = super.widget.peer;
     var deco = Rx<BoxDecoration?>(
       BoxDecoration(
-        border: Border.all(color: Colors.transparent, width: _borderWidth),
+        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
         borderRadius: BorderRadius.circular(
           peerCardUiType.value == PeerUiType.grid ? _cardRadius : _tileRadius,
         ),
@@ -105,16 +129,23 @@ class _PeerCardState extends State<_PeerCard>
       onEnter: (evt) {
         deco.value = BoxDecoration(
           border: Border.all(
-              color: Theme.of(context).colorScheme.primary,
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.9),
               width: _borderWidth),
           borderRadius: BorderRadius.circular(
             peerCardUiType.value == PeerUiType.grid ? _cardRadius : _tileRadius,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.35),
+              blurRadius: 14,
+              spreadRadius: 1,
+            ),
+          ],
         );
       },
       onExit: (evt) {
         deco.value = BoxDecoration(
-          border: Border.all(color: Colors.transparent, width: _borderWidth),
+          border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.5),
           borderRadius: BorderRadius.circular(
             peerCardUiType.value == PeerUiType.grid ? _cardRadius : _tileRadius,
           ),
@@ -289,98 +320,219 @@ class _PeerCardState extends State<_PeerCard>
       color: Colors.transparent,
       elevation: 0,
       margin: EdgeInsets.zero,
-      // to-do: memory leak here, more investigation needed.
-      // Continious rebuilds of `Obx()` will cause memory leak here.
-      // The simple demo does not have this issue.
       child: Obx(
-        () => Container(
-          foregroundDecoration: deco.value,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(_cardRadius - _borderWidth),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Container(
-                    color: str2color('${peer.id}${peer.platform}', 0x7f),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                child:
-                                    getPlatformImage(peer.platform, size: 60),
-                              ),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Tooltip(
-                                      message: name,
-                                      waitDuration: const Duration(seconds: 1),
-                                      child: Text(
-                                        name,
-                                        style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 12),
-                                        textAlign: TextAlign.center,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (_showNote(peer))
-                                Row(
-                                  children: [
-                                    Expanded(
-                                        child: Tooltip(
-                                      message: peer.note,
-                                      waitDuration: const Duration(seconds: 1),
-                                      child: Text(
-                                        peer.note,
-                                        style: const TextStyle(
-                                            color: Colors.white38,
-                                            fontSize: 10),
-                                        textAlign: TextAlign.center,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ))
-                                  ],
-                                ),
-                            ],
-                          ).paddingOnly(top: 4.0, left: 4.0, right: 4.0),
-                        ),
-                      ],
-                    ),
-                  ),
+        () {
+          final thumbnailFile = getPeerThumbnail(peer.id);
+          final hasThumbnail = thumbnailFile != null;
+
+          String defaultWallpaper;
+          final p = peer.platform.toLowerCase();
+          if (p.contains('win')) {
+            defaultWallpaper = 'assets/wallpapers/windows.jpg';
+          } else {
+            final hash = peer.id.hashCode.abs() % 2;
+            defaultWallpaper = hash == 0
+                ? 'assets/wallpapers/lake.jpg'
+                : 'assets/wallpapers/hills.jpg';
+          }
+
+          final statusColor =
+              peer.online ? const Color(0xFF00FF66) : const Color(0xFFFF3333);
+          final isFav = widget.tab == PeerTabIndex.fav;
+
+          return Container(
+            foregroundDecoration: deco.value,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: const Color(0xFF1E293B),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
-                Container(
-                  color: Theme.of(context).colorScheme.background,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                          child: Row(children: [
-                        getOnline(8, peer.online),
-                        Expanded(
-                            child: Text(
-                          peer.alias.isEmpty ? formatID(peer.id) : peer.alias,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        )),
-                      ]).paddingSymmetric(vertical: 8)),
-                      checkBoxOrActionMoreLandscape(peer, isTile: false),
-                    ],
-                  ).paddingSymmetric(horizontal: 12.0),
-                )
               ],
             ),
-          ),
-        ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // 1. Wallpaper background
+                  if (hasThumbnail)
+                    Image.file(
+                      thumbnailFile,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    )
+                  else
+                    Image.asset(
+                      defaultWallpaper,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+
+                  // 2. Top-left Status indicator (Green/Red dot like AnyDesk)
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: statusColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: statusColor.withOpacity(0.8),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 3. Top-right Favorite Star
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () async {
+                        final favs = (await bind.mainGetFav()).toList();
+                        if (favs.contains(peer.id)) {
+                          favs.remove(peer.id);
+                        } else {
+                          favs.add(peer.id);
+                        }
+                        await bind.mainStoreFav(favs: favs);
+                        await bind.mainLoadFavPeers();
+                        final peerTabModel =
+                            Provider.of<PeerTabModel>(context, listen: false);
+                        peerTabModel.setCurrentTabCachedPeers([]);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: Icon(
+                          isFav ? Icons.star_rounded : Icons.star_outline_rounded,
+                          size: 19,
+                          color: isFav
+                              ? const Color(0xFFFFD700)
+                              : Colors.white.withOpacity(0.85),
+                          shadows: const [
+                            Shadow(color: Colors.black54, blurRadius: 4),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // 4. Bottom Control Bar Overlay
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.85),
+                            Colors.black.withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.desktop_windows_outlined,
+                                      size: 17,
+                                      color: Colors.white.withOpacity(0.85),
+                                      shadows: const [
+                                        Shadow(
+                                            color: Colors.black, blurRadius: 4),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 7),
+                                    Expanded(
+                                      child: Text(
+                                        peer.alias.isEmpty
+                                            ? formatID(peer.id)
+                                            : peer.alias,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontFamily: 'WorkSans',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.4,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(
+                                                color: Colors.black87,
+                                                blurRadius: 4),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              checkBoxOrActionMoreLandscape(peer,
+                                  isTile: false),
+                            ],
+                          ),
+                          if (name.isNotEmpty && name != peer.id)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 24, top: 1),
+                              child: Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Colors.white.withOpacity(0.75),
+                                  shadows: const [
+                                    Shadow(color: Colors.black, blurRadius: 3),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // 5. Bottom subtle accent border
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      height: 3,
+                      color: p.contains('win')
+                          ? const Color(0xFF0284C7)
+                          : const Color(0xFFE11D48),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
 
@@ -395,9 +547,16 @@ class _PeerCardState extends State<_PeerCard>
         child,
         if (_shouldBuildPasswordIcon(peer))
           Positioned(
-            top: 4,
-            left: 12,
-            child: Icon(Icons.key, size: 12, color: Colors.white),
+            top: 8,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.35),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.key, size: 11, color: Colors.white70),
+            ),
           ),
         if (colors.isNotEmpty)
           Positioned(
@@ -523,17 +682,73 @@ abstract class BasePeerCard extends StatelessWidget {
     );
   }
 
+  MenuEntryBase<String> _screenshotAction(BuildContext context) {
+    final hasScreenshot = getPeerThumbnail(peer.id) != null;
+    return MenuEntryButton<String>(
+      childBuilder: (TextStyle? style) => Row(
+        children: [
+          Icon(
+            hasScreenshot
+                ? Icons.hide_image_outlined
+                : Icons.add_photo_alternate_outlined,
+            size: 15,
+          ).marginOnly(right: 8),
+          Text(
+            hasScreenshot
+                ? translate('Clear screenshot')
+                : translate('Set screenshot'),
+            style: style,
+          ),
+        ],
+      ),
+      proc: () async {
+        if (hasScreenshot) {
+          try {
+            final f = getPeerThumbnail(peer.id);
+            f?.deleteSync();
+            showToast(translate('Cleared'));
+            final peerTabModel =
+                Provider.of<PeerTabModel>(context, listen: false);
+            peerTabModel.setCurrentTabCachedPeers([]);
+          } catch (_) {}
+        } else {
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.image,
+          );
+          if (result != null && result.files.single.path != null) {
+            final pickedFile = File(result.files.single.path!);
+            final targetPath = getThumbnailPath(peer.id);
+            final targetDir = Directory(File(targetPath).parent.path);
+            if (!targetDir.existsSync()) {
+              targetDir.createSync(recursive: true);
+            }
+            pickedFile.copySync(targetPath);
+            showToast(translate('Saved'));
+            final peerTabModel =
+                Provider.of<PeerTabModel>(context, listen: false);
+            peerTabModel.setCurrentTabCachedPeers([]);
+          }
+        }
+      },
+      padding: menuPadding,
+      dismissOnClicked: true,
+    );
+  }
+
   Future<List<mod_menu.PopupMenuEntry<String>>> _buildPopupMenuEntry(
-          BuildContext context) async =>
-      (await _buildMenuItems(context))
-          .map((e) => e.build(
-              context,
-              const MenuConfig(
-                  commonColor: CustomPopupMenuTheme.commonColor,
-                  height: CustomPopupMenuTheme.height,
-                  dividerHeight: CustomPopupMenuTheme.dividerHeight)))
-          .expand((i) => i)
-          .toList();
+          BuildContext context) async {
+    final items = await _buildMenuItems(context);
+    items.add(_screenshotAction(context));
+    return items
+        .map((e) => e.build(
+            context,
+            const MenuConfig(
+                commonColor: CustomPopupMenuTheme.commonColor,
+                height: CustomPopupMenuTheme.height,
+                dividerHeight: CustomPopupMenuTheme.dividerHeight)))
+        .expand((i) => i)
+        .toList();
+  }
 
   @protected
   Future<List<MenuEntryBase<String>>> _buildMenuItems(BuildContext context);
@@ -1465,13 +1680,27 @@ void _rdpDialog(String id) async {
 }
 
 Widget getOnline(double rightPadding, bool online) {
+  final color = online ? const Color(0xFF22C55E) : kColorWarn;
   return Tooltip(
       message: translate(online ? 'Online' : 'Offline'),
       waitDuration: const Duration(seconds: 1),
       child: Padding(
           padding: EdgeInsets.fromLTRB(0, 4, rightPadding, 4),
-          child: CircleAvatar(
-              radius: 3, backgroundColor: online ? Colors.green : kColorWarn)));
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.6),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+          )));
 }
 
 Widget build_more(BuildContext context, {bool invert = false}) {

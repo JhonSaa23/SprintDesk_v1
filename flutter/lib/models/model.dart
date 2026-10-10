@@ -2124,7 +2124,7 @@ class ViewStyle {
     final h =
         desktop ? kDesktopDefaultDisplayHeight : kMobileDefaultDisplayHeight;
     return ViewStyle(
-      style: '',
+      style: kRemoteViewStyleAdaptive,
       width: w.toDouble(),
       height: h.toDouble(),
       displayWidth: w,
@@ -2376,9 +2376,11 @@ class CanvasModel with ChangeNotifier {
   updateSize() => _size = getSize();
 
   updateViewStyle({refreshMousePos = true, notify = true}) async {
-    final style = await bind.sessionGetViewStyle(sessionId: sessionId);
-    if (style == null) {
-      return;
+    var style = await bind.sessionGetViewStyle(sessionId: sessionId);
+    if (style == null || style.isEmpty) {
+      style = kRemoteViewStyleAdaptive;
+      await bind.sessionSetViewStyle(
+          sessionId: sessionId, value: kRemoteViewStyleAdaptive);
     }
 
     updateSize();
@@ -4322,6 +4324,8 @@ class FFI {
       ffiModel.resetRestartReconnectState();
       dialogManager.dismissAll();
       try {
+        await bind.sessionSetViewStyle(
+            sessionId: sessionId, value: kRemoteViewStyleAdaptive);
         await canvasModel.updateViewStyle();
         await canvasModel.updateScrollStyle();
         await canvasModel.initializeEdgeScrollEdgeThickness();

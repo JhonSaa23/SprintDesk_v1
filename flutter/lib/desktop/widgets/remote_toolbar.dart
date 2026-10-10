@@ -24,6 +24,8 @@ import './popup_menu.dart';
 import './kb_layout_type_chooser.dart';
 import 'package:flutter_hbb/utils/scale.dart';
 import 'package:flutter_hbb/common/widgets/custom_scale_base.dart';
+import 'package:flutter_hbb/desktop/pages/remote_page.dart';
+import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 
 enum _ToolbarEdge { top, right, bottom, left }
 
@@ -337,7 +339,7 @@ class _ToolbarTheme {
 
   static const double buttonSize = 32;
   static const double buttonHMargin = 2;
-  static const double buttonVMargin = 6;
+  static const double buttonVMargin = 2;
   static const double iconRadius = 8;
   static const double elevation = 3;
 
@@ -3785,6 +3787,98 @@ class _MinimizedMonitorSwitchButton extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+class RemoteHeaderActions extends StatelessWidget {
+  final DesktopTabController tabController;
+
+  const RemoteHeaderActions({Key? key, required this.tabController})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final tabState = tabController.state.value;
+      if (tabState.tabs.isEmpty) return const SizedBox.shrink();
+      final index = tabState.selected;
+      if (index < 0 || index >= tabState.tabs.length) {
+        return const SizedBox.shrink();
+      }
+      final page = tabState.tabs[index].page;
+      if (page is! RemotePage) return const SizedBox.shrink();
+      final ffi = page.ffi;
+      final id = page.id;
+      final toolbarState = page.toolbarState;
+      final pi = ffi.ffiModel.pi;
+
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: ffi.ffiModel),
+          ChangeNotifierProvider.value(value: ffi.recordingModel),
+        ],
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            menuButtonTheme: MenuButtonThemeData(
+              style: ButtonStyle(
+                minimumSize: const MaterialStatePropertyAll(Size(48, 28)),
+                textStyle: const MaterialStatePropertyAll(
+                  TextStyle(fontWeight: FontWeight.normal),
+                ),
+                shape: MaterialStatePropertyAll(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(
+                        _ToolbarTheme.menuButtonBorderRadius))),
+              ),
+            ),
+            dividerTheme: DividerThemeData(
+              space: _ToolbarTheme.dividerSpaceToAction,
+              color: _ToolbarTheme.dividerColor(context),
+            ),
+            menuBarTheme: MenuBarThemeData(
+              style: const MenuStyle(
+                padding: MaterialStatePropertyAll(EdgeInsets.zero),
+                elevation: MaterialStatePropertyAll(0),
+                shape: MaterialStatePropertyAll(BeveledRectangleBorder()),
+              ).copyWith(
+                backgroundColor:
+                    Theme.of(context).menuBarTheme.style?.backgroundColor,
+              ),
+            ),
+          ),
+          child: Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (pi.displaysCount.value > 1 &&
+                    mainGetLocalBoolOptionSync(
+                        kOptionAllowMonitorSwitchMainToolbar))
+                  _MainMonitorSwitchButton(id: id, ffi: ffi),
+                _ControlMenu(id: id, ffi: ffi, state: toolbarState),
+                _DisplayMenu(
+                  id: id,
+                  ffi: ffi,
+                  state: toolbarState,
+                  setFullscreen: (v) => stateGlobal.setFullscreen(v),
+                ),
+                if (ffi.connType == ConnType.defaultConn)
+                  _KeyboardMenu(id: id, ffi: ffi),
+                _ChatMenu(id: id, ffi: ffi),
+                if (!isWeb) _VoiceCallMenu(id: id, ffi: ffi),
+                if (!isWeb) const _RecordMenu(),
+                _CloseMenu(id: id, ffi: ffi),
+              ],
+            ),
           ),
         ),
       );

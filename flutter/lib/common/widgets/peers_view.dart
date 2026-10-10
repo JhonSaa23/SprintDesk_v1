@@ -191,18 +191,38 @@ class _PeersViewState extends State<_PeersView>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.sentiment_very_dissatisfied_rounded,
-                  color: Theme.of(context).tabBarTheme.labelColor,
-                  size: 40,
-                ).paddingOnly(bottom: 10),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.03),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withOpacity(0.06)),
+                  ),
+                  child: Icon(
+                    Icons.devices_other_rounded,
+                    color: Colors.white.withOpacity(0.3),
+                    size: 38,
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Text(
                   translate(
                     _emptyMessages[widget.peers.loadEvent] ?? 'Empty',
                   ),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Theme.of(context).tabBarTheme.labelColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withOpacity(0.55),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  translate('Enter Remote ID above to start connecting'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.3),
                   ),
                 ),
               ],

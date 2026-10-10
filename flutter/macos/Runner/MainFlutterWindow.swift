@@ -54,6 +54,42 @@ class MainFlutterWindow: NSWindow {
             forKey: window
         )
     }
+    private static let headerHeight: CGFloat = 56
+
+    private func centerTrafficLights() {
+        guard !styleMask.contains(.fullScreen),
+              let close = standardWindowButton(.closeButton),
+              let titlebar = close.superview?.superview else {
+            return
+        }
+        var f = titlebar.frame
+        f.size.height = MainFlutterWindow.headerHeight
+        f.origin.y = frame.height - MainFlutterWindow.headerHeight
+        titlebar.frame = f
+        for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            guard let button = standardWindowButton(type) else { continue }
+            var bf = button.frame
+            bf.origin.y = (MainFlutterWindow.headerHeight - bf.height) / 2
+            button.setFrameOrigin(bf.origin)
+        }
+    }
+
+    private func setupTrafficLightCentering() {
+        let names: [NSNotification.Name] = [
+            NSWindow.didResizeNotification,
+            NSWindow.didBecomeKeyNotification,
+            NSWindow.didExitFullScreenNotification,
+            NSWindow.didEndLiveResizeNotification,
+        ]
+        for name in names {
+            NotificationCenter.default.addObserver(forName: name, object: self, queue: .main) { [weak self] _ in
+                self?.centerTrafficLights()
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.centerTrafficLights()
+        }
+    }
 
     override func awakeFromNib() {
         rustdesk_core_main();
@@ -62,6 +98,7 @@ class MainFlutterWindow: NSWindow {
         let windowFrame = self.frame
         self.contentViewController = flutterViewController
         self.setFrame(windowFrame, display: true)
+        setupTrafficLightCentering()
         // register self method handler
         let registrar = flutterViewController.registrar(forPlugin: "RustDeskPlugin")
         setMethodHandler(registrar: registrar)

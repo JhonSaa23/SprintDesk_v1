@@ -245,6 +245,7 @@ class DesktopTab extends StatefulWidget {
   // Right click tab menu
   final TabMenuBuilder? tabMenuBuilder;
   final Widget? tail;
+  final Widget? leading;
   final Future<bool> Function()? onWindowCloseButton;
   final TabBuilder? tabBuilder;
   final LabelGetter? labelGetter;
@@ -270,6 +271,7 @@ class DesktopTab extends StatefulWidget {
     this.pageViewBuilder,
     this.tabMenuBuilder,
     this.tail,
+    this.leading,
     this.onWindowCloseButton,
     this.tabBuilder,
     this.labelGetter,
@@ -327,6 +329,10 @@ class _DesktopTabState extends State<DesktopTab>
       tabType == DesktopTabType.install;
 
   _DesktopTabState() : super();
+
+  double get _barHeight => tabType == DesktopTabType.main && widget.leading != null
+      ? 56.0
+      : (tabType == DesktopTabType.remoteScreen ? 38.0 : _kTabBarHeight);
 
   static RxString tablabelGetter(String peerId) {
     final alias = bind.mainGetPeerOptionSync(id: peerId, key: 'alias');
@@ -516,12 +522,11 @@ class _DesktopTabState extends State<DesktopTab>
             !(kUseCompatibleUiMode && isHideSingleItem())) {
           final showBottomDivider = _showTabBarBottomDivider(tabType);
           return SizedBox(
-            height: _kTabBarHeight,
+            height: _barHeight,
             child: Column(
               children: [
                 SizedBox(
-                  height:
-                      showBottomDivider ? _kTabBarHeight - 1 : _kTabBarHeight,
+                  height: showBottomDivider ? _barHeight - 1 : _barHeight,
                   child: _buildBar(),
                 ),
                 if (showBottomDivider)
@@ -640,15 +645,16 @@ class _DesktopTabState extends State<DesktopTab>
                         ),
                         Offstage(
                             offstage: !showTitle,
-                            child: const Text(
-                              "RustDesk",
-                              style: TextStyle(fontSize: 13),
+                            child: Text(
+                              bind.mainGetAppNameSync(),
+                              style: const TextStyle(fontSize: 13),
                             ).marginOnly(left: 2))
                       ]).marginOnly(
                         left: 5,
                         right: 10,
                       ),
                     ),
+                    if (widget.leading != null) widget.leading!,
                     Expanded(
                         child: Listener(
                             // handle mouse wheel
@@ -1143,61 +1149,110 @@ class _TabState extends State<_Tab> with RestorationMixin {
   @override
   Widget build(BuildContext context) {
     bool isSelected = widget.index == widget.selected;
+    bool isMainTab = widget.tabType == DesktopTabType.main;
     bool showDivider =
-        widget.index != widget.selected - 1 && widget.index != widget.selected;
+        !isMainTab && widget.index != widget.selected - 1 && widget.index != widget.selected;
     RxBool hover = restoreHover.value.obs;
-    return Ink(
-      child: InkWell(
-        onHover: (value) {
-          hover.value = value;
-          restoreHover.value = value;
-        },
-        onTap: () => widget.onTap(),
-        child: Container(
-            decoration: isSelected && widget.selectedBorderColor != null
-                ? BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color: widget.selectedBorderColor!,
-                        width: 1,
-                      ),
-                    ),
-                  )
-                : null,
-            child: Container(
-              color: isSelected
-                  ? widget.selectedTabBackgroundColor
-                  : widget.unSelectedTabBackgroundColor,
-              child: Row(
-                children: [
-                  SizedBox(
-                      // _kTabBarHeight also displays normally
-                      height: _showTabBarBottomDivider(widget.tabType)
-                          ? _kTabBarHeight - 1
-                          : _kTabBarHeight,
-                      child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            _buildTabContent(),
-                            Obx((() => _CloseButton(
-                                  visible: hover.value && widget.closable,
-                                  tabSelected: isSelected,
-                                  onClose: () => widget.onClose(),
-                                )))
-                          ])).paddingOnly(left: 10, right: 5),
-                  Offstage(
-                    offstage: !showDivider,
-                    child: VerticalDivider(
+    final isHovered = restoreHover.value;
+    return InkWell(
+      borderRadius: isMainTab ? BorderRadius.circular(9) : null,
+      onHover: (value) {
+        hover.value = value;
+        restoreHover.value = value;
+        if (isMainTab) setState(() {});
+      },
+      onTap: () => widget.onTap(),
+      child: Container(
+          decoration: !isMainTab && isSelected && widget.selectedBorderColor != null
+              ? BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: widget.selectedBorderColor!,
                       width: 1,
-                      indent: _kDividerIndent,
-                      endIndent: _kDividerIndent,
-                      color: MyTheme.tabbar(context).dividerColor,
                     ),
+                  ),
+                )
+              : null,
+          child: Container(
+            margin: widget.tabType == DesktopTabType.remoteScreen
+                ? const EdgeInsets.fromLTRB(2, 4, 2, 0)
+                : (isMainTab
+                    ? const EdgeInsets.symmetric(horizontal: 4, vertical: 11)
+                    : null),
+            padding: isMainTab
+                ? const EdgeInsets.symmetric(horizontal: 10)
+                : null,
+            decoration: widget.tabType == DesktopTabType.remoteScreen
+                ? BoxDecoration(
+                    color: isSelected
+                        ? MyTheme.accent.withOpacity(0.22)
+                        : Colors.white.withOpacity(0.04),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(10)),
+                    border: Border.all(
+                        color: Colors.white
+                            .withOpacity(isSelected ? 0.18 : 0.06)),
                   )
-                ],
-              ),
-            )),
-      ),
+                : (isMainTab
+                    ? BoxDecoration(
+                        color: isSelected
+                            ? Colors.white.withOpacity(0.09)
+                            : (isHovered
+                                ? Colors.white.withOpacity(0.04)
+                                : Colors.transparent),
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.white.withOpacity(0.12)
+                              : Colors.transparent,
+                          width: 1,
+                        ),
+                      )
+                    : null),
+            color: (widget.tabType == DesktopTabType.remoteScreen || isMainTab)
+                ? null
+                : isSelected
+                    ? widget.selectedTabBackgroundColor
+                    : widget.unSelectedTabBackgroundColor,
+
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                    height: isMainTab
+                        ? 34
+                        : (_showTabBarBottomDivider(widget.tabType)
+                            ? _kTabBarHeight - 1
+                            : _kTabBarHeight),
+                    child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _buildTabContent(),
+                          Obx((() => _CloseButton(
+                                visible: (hover.value ||
+                                        (widget.tabType ==
+                                                DesktopTabType.remoteScreen &&
+                                            isSelected)) &&
+                                    widget.closable,
+                                tabSelected: isSelected,
+                                onClose: () => widget.onClose(),
+                              )))
+                        ])).paddingOnly(
+                  left: isMainTab ? 0 : 10,
+                  right: isMainTab ? 0 : 5,
+                ),
+                Offstage(
+                  offstage: !showDivider,
+                  child: VerticalDivider(
+                    width: 1,
+                    indent: _kDividerIndent,
+                    endIndent: _kDividerIndent,
+                    color: MyTheme.tabbar(context).dividerColor,
+                  ),
+                )
+              ],
+            ),
+          )),
     );
   }
 
@@ -1324,6 +1379,42 @@ class AddButton extends StatelessWidget {
         onTap: () => rustDeskWinManager.call(
             WindowType.Main, kWindowMainWindowOnTop, ""),
         isClose: false);
+  }
+}
+
+class NewSessionChip extends StatelessWidget {
+  const NewSessionChip({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Material(
+        color: MyTheme.accent.withOpacity(0.18),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: Colors.white.withOpacity(0.16)),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => rustDeskWinManager.call(
+              WindowType.Main, kWindowMainWindowOnTop, ""),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_rounded, size: 16, color: MyTheme.accent),
+                const SizedBox(width: 4),
+                Text(translate('New Connection'),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

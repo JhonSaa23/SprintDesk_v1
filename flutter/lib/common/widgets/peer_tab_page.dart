@@ -141,47 +141,34 @@ class _PeerTabPageState extends State<PeerTabPage>
         buildDefaultDragHandles: false,
         onReorder: model.reorder,
         scrollDirection: Axis.horizontal,
-        physics: NeverScrollableScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         children: model.visibleEnabledOrderedIndexs.map((t) {
           final selected = model.currentTab == t;
           final color = selected
-              ? MyTheme.tabbar(context).selectedTextColor
-              : MyTheme.tabbar(context).unSelectedTextColor
-            ?..withOpacity(0.5);
-          final hover = false.obs;
-          final deco = BoxDecoration(
-              color: Theme.of(context).colorScheme.background,
-              borderRadius: BorderRadius.circular(6));
-          final decoBorder = BoxDecoration(
-              border: Border(
-            bottom: BorderSide(width: 2, color: color!),
-          ));
+              ? Colors.white
+              : (Theme.of(context).textTheme.titleLarge?.color?.withOpacity(0.55) ??
+                  Colors.grey);
           counter += 1;
+          final tooltip = model.tabTooltip(t);
           return ReorderableDragStartListener(
-              key: ValueKey(t),
-              index: counter,
-              child: Obx(() => Tooltip(
-                    preferBelow: false,
-                    message: model.tabTooltip(t),
-                    onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
-                    child: InkWell(
-                      child: Container(
-                        decoration: (hover.value
-                            ? (selected ? decoBorder : deco)
-                            : (selected ? decoBorder : null)),
-                        child: Icon(model.tabIcon(t), color: color)
-                            .paddingSymmetric(horizontal: 4),
-                      ).paddingSymmetric(horizontal: 4),
-                      onTap: isOptionFixed(kOptionPeerTabIndex)
-                          ? null
-                          : () async {
-                              await handleTabSelection(t);
-                              await bind.setLocalFlutterOption(
-                                  k: kOptionPeerTabIndex, v: t.toString());
-                            },
-                      onHover: (value) => hover.value = value,
-                    ),
-                  )));
+            key: ValueKey(t),
+            index: counter,
+            child: _PeerTabSwitchItem(
+              tabIndex: t,
+              tooltip: tooltip,
+              selected: selected,
+              color: color,
+              icon: model.tabIcon(t),
+              onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
+              onTap: isOptionFixed(kOptionPeerTabIndex)
+                  ? null
+                  : () async {
+                      await handleTabSelection(t);
+                      await bind.setLocalFlutterOption(
+                          k: kOptionPeerTabIndex, v: t.toString());
+                    },
+            ),
+          );
         }).toList());
   }
 
@@ -1037,3 +1024,92 @@ class PullDownMenuEntryImpl extends StatelessWidget
     return child;
   }
 }
+
+class _PeerTabSwitchItem extends StatefulWidget {
+  final int tabIndex;
+  final String tooltip;
+  final bool selected;
+  final Color color;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final VoidCallback? onTriggered;
+
+  const _PeerTabSwitchItem({
+    Key? key,
+    required this.tabIndex,
+    required this.tooltip,
+    required this.selected,
+    required this.color,
+    required this.icon,
+    this.onTap,
+    this.onTriggered,
+  }) : super(key: key);
+
+  @override
+  State<_PeerTabSwitchItem> createState() => _PeerTabSwitchItemState();
+}
+
+class _PeerTabSwitchItemState extends State<_PeerTabSwitchItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      preferBelow: false,
+      message: widget.tooltip,
+      onTriggered: widget.onTriggered,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: widget.onTap,
+        onHover: (value) {
+          if (_isHovered != value) {
+            setState(() => _isHovered = value);
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 5,
+          ),
+          margin: const EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(
+            color: widget.selected
+                ? MyTheme.accent.withOpacity(0.18)
+                : (_isHovered
+                    ? Colors.white.withOpacity(0.06)
+                    : Colors.transparent),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: widget.selected
+                  ? MyTheme.accent.withOpacity(0.4)
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.icon,
+                color: widget.selected ? MyTheme.accent : widget.color,
+                size: 15,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.tooltip,
+                style: TextStyle(
+                  color: widget.selected ? Colors.white : widget.color,
+                  fontSize: 12,
+                  fontWeight:
+                      widget.selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
