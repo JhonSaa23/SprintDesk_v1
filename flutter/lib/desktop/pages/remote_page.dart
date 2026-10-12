@@ -1144,7 +1144,7 @@ class _ImagePaintState extends State<ImagePaint> {
             if (isDesktop) {
               return _getDesktopCursorScale(c, dpr);
             } else {
-              return zoomCursor.value || isViewOriginal() ? s : 1.0;
+              return zoomCursor.value || isViewOriginal() || c.viewStyle.style == kRemoteViewStyleAdaptive ? s : 1.0;
             }
           }
 
@@ -1222,17 +1222,19 @@ class _ImagePaintState extends State<ImagePaint> {
   /// Matches desktop cursors to the rendered image and native pixel units.
   ///
   /// Windows cursor pixels are physical; NSCursor/GdkCursor use logical pixels.
-  /// Unzoomed Adaptive/Custom views preserve macOS cursors' point dimensions.
+  /// Unzoomed Custom views preserve macOS cursors' point dimensions.
   double _getDesktopCursorScale(CanvasModel c, double dpr) {
     final peer = widget.ffi.ffiModel;
-    if (!zoomCursor.value &&
+    final isAdaptive = c.viewStyle.style == kRemoteViewStyleAdaptive;
+    final shouldZoom = zoomCursor.value || isAdaptive;
+    if (!shouldZoom &&
         peer.pi.platform == kPeerPlatformMacOS &&
         (c.viewStyle.style == kRemoteViewStyleAdaptive ||
             c.viewStyle.style == kRemoteViewStyleCustom)) {
       return isWindows ? dpr : 1.0;
     }
     if (peer.isPeerLinux && peer.pi.currentDisplay == kAllDisplayValue) {
-      if (!zoomCursor.value || c.viewStyle.style == kRemoteViewStyleOriginal) {
+      if (!shouldZoom || c.viewStyle.style == kRemoteViewStyleOriginal) {
         // Remove the host output's density without applying canvas zoom.
         final scale = 1.0 / _cursorDisplayScale.value;
         return isWindows ? scale : scale / dpr;
@@ -1240,7 +1242,7 @@ class _ImagePaintState extends State<ImagePaint> {
       final scale = c.scale / _cursorDisplayScale.value;
       return isWindows ? scale * dpr : scale;
     }
-    if (!zoomCursor.value || c.viewStyle.style == kRemoteViewStyleOriginal) {
+    if (!shouldZoom || c.viewStyle.style == kRemoteViewStyleOriginal) {
       // Original and unzoomed views do not apply canvas zoom.
       final scale = _getCursorScaleForDisplay(1.0);
       return isWindows ? scale : scale / dpr;

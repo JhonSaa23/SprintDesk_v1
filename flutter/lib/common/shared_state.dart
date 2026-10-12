@@ -348,7 +348,7 @@ initSharedStates(String id) {
   ShowRemoteCursorLockState.init(id);
   RemoteCursorMovedState.init(id);
   FingerprintState.init(id);
-  PeerBoolOption.init(id, kOptionZoomCursor, () => false);
+  PeerBoolOption.init(id, kOptionZoomCursor, () => true);
   UnreadChatCountState.init(id);
   if (isMobile) ConnectionTypeState.init(id); // desktop in other places
 }
