@@ -265,6 +265,7 @@ class ConnectionManagerState extends State<ConnectionManager>
                                     block: _controlPageBlock,
                                     mask: false,
                                   ))),
+                  ]);
                   return Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
