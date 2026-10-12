@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common/widgets/audio_input.dart';
@@ -94,19 +95,42 @@ class _DesktopServerPageState extends State<DesktopServerPage>
       child: Consumer<ServerModel>(
         builder: (context, serverModel, child) {
           final body = Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.background,
-            body: ConnectionManager(),
+            backgroundColor: Colors.transparent,
+            body: ClipRRect(
+              borderRadius: BorderRadius.circular(16.0),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 25.0, sigmaY: 25.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16.0),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF0F172A).withOpacity(0.72),
+                        const Color(0xFF090D16).withOpacity(0.82),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.18),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.40),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: ConnectionManager(),
+                ),
+              ),
+            ),
           );
           return isLinux
               ? buildVirtualWindowFrame(context, body)
-              : workaroundWindowBorder(
-                  context,
-                  Container(
-                    decoration: BoxDecoration(
-                        border:
-                            Border.all(color: MyTheme.color(context).border!)),
-                    child: body,
-                  ));
+              : workaroundWindowBorder(context, body);
         },
       ),
     );
@@ -202,9 +226,11 @@ class ConnectionManagerState extends State<ConnectionManager>
               showMaximize: false,
               showMinimize: true,
               showClose: true,
+              selectedTabBackgroundColor: Colors.white.withOpacity(0.10),
+              unSelectedTabBackgroundColor: Colors.transparent,
+              selectedBorderColor: const Color(0xFF38BDF8).withOpacity(0.60),
               onWindowCloseButton: handleWindowCloseButton,
               controller: serverModel.tabController,
-              selectedBorderColor: MyTheme.accent,
               maxLabelWidth: 100,
               tail: null, //buildScrollJumper(),
               tabBuilder: (key, icon, label, themeConf) {
@@ -267,16 +293,7 @@ class ConnectionManagerState extends State<ConnectionManager>
                                   ))),
                   ]);
                   return Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Color(0xFF131722),
-                          Color(0xFF0C0E15),
-                        ],
-                      ),
-                    ),
+                    color: Colors.transparent,
                     child: row,
                   );
                 },
@@ -1182,11 +1199,26 @@ class _CmControlPanel extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Expanded(
-            child: buildButton(context,
-                color: MyTheme.accent,
-                onClick: handleClose,
-                text: 'Close',
-                textColor: Colors.white)),
+          child: buildButton(
+            context,
+            color: null,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xEE0284C7),
+                Color(0xEE2563EB),
+              ],
+            ),
+            border: Border.all(
+              color: const Color(0x9993C5FD),
+              width: 1.2,
+            ),
+            onClick: handleClose,
+            text: 'Close',
+            textColor: Colors.white,
+          ),
+        ),
       ],
     ).marginOnly(bottom: buttonBottomMargin);
   }
@@ -1206,19 +1238,35 @@ class _CmControlPanel extends StatelessWidget {
       children: [
         Offstage(
           offstage: !showElevation || !showAccept,
-          child: buildButton(context, color: Colors.green[700], onClick: () {
-            handleAccept(context);
-            handleElevate(context);
-            windowManager.minimize();
-          },
-              text: 'Accept and Elevate',
-              icon: Icon(
-                Icons.security_rounded,
-                color: Colors.white,
-                size: 14,
-              ),
-              textColor: Colors.white,
-              tooltip: 'accept_and_elevate_btn_tooltip'),
+          child: buildButton(
+            context,
+            color: null,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xEE059669),
+                Color(0xEE0D9488),
+              ],
+            ),
+            border: Border.all(
+              color: const Color(0x996EE7B7),
+              width: 1.2,
+            ),
+            onClick: () {
+              handleAccept(context);
+              handleElevate(context);
+              windowManager.minimize();
+            },
+            text: 'Accept and Elevate',
+            icon: const Icon(
+              Icons.security_rounded,
+              color: Colors.white,
+              size: 14,
+            ),
+            textColor: Colors.white,
+            tooltip: 'accept_and_elevate_btn_tooltip',
+          ),
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1229,7 +1277,19 @@ class _CmControlPanel extends StatelessWidget {
                   children: [
                     buildButton(
                       context,
-                      color: MyTheme.accent,
+                      color: null,
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xEE0284C7),
+                          Color(0xEE2563EB),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: const Color(0x9993C5FD),
+                        width: 1.2,
+                      ),
                       onClick: () {
                         handleAccept(context);
                         windowManager.minimize();
@@ -1243,11 +1303,22 @@ class _CmControlPanel extends StatelessWidget {
             Expanded(
               child: buildButton(
                 context,
-                color: Colors.transparent,
-                border: Border.all(color: Colors.grey),
+                color: null,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.12),
+                    Colors.white.withOpacity(0.04),
+                  ],
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.22),
+                  width: 1.2,
+                ),
                 onClick: handleDisconnect,
                 text: 'Cancel',
-                textColor: null,
+                textColor: Colors.white.withOpacity(0.92),
               ),
             ),
           ],
@@ -1258,6 +1329,7 @@ class _CmControlPanel extends StatelessWidget {
 
   Widget buildButton(BuildContext context,
       {required Color? color,
+      Gradient? gradient,
       GestureTapCallback? onClick,
       Widget? icon,
       BoxBorder? border,
@@ -1270,52 +1342,73 @@ class _CmControlPanel extends StatelessWidget {
     if (icon != null) {
       textWidget = Text(
         translate(text),
-        style: TextStyle(color: textColor),
+        style: TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+          fontSize: 13.5,
+          letterSpacing: 0.3,
+        ),
         textAlign: TextAlign.center,
       );
     } else {
       textWidget = Expanded(
         child: Text(
           translate(text),
-          style: TextStyle(color: textColor),
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w600,
+            fontSize: 13.5,
+            letterSpacing: 0.3,
+          ),
           textAlign: TextAlign.center,
         ),
       );
     }
     final borderRadius = BorderRadius.circular(14.0);
     final btn = Container(
-      height: 38,
+      height: 40,
       margin: const EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
-        color: color,
+        color: gradient == null ? color : null,
+        gradient: gradient,
         borderRadius: borderRadius,
-        border: border,
+        border: border ??
+            Border.all(
+              color: Colors.white.withOpacity(0.16),
+              width: 1.0,
+            ),
         boxShadow: [
           BoxShadow(
-            color: (color ?? Colors.transparent).withOpacity(0.18),
-            blurRadius: 10,
+            color: (gradient != null
+                    ? const Color(0xFF0284C7)
+                    : (color ?? Colors.transparent))
+                .withOpacity(0.25),
+            blurRadius: 12,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: InkWell(
-        borderRadius: borderRadius,
-        onTap: () {
-          if (onClick == null) return;
-          checkClickTime(client.id, onClick);
-        },
-        onTapDown: (details) {
-          if (onTapDown == null) return;
-          checkClickTime(client.id, () {
-            onTapDown.call(details);
-          });
-        },
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Offstage(offstage: icon == null, child: icon).marginOnly(right: 5),
-            textWidget,
-          ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: borderRadius,
+          onTap: () {
+            if (onClick == null) return;
+            checkClickTime(client.id, onClick);
+          },
+          onTapDown: (details) {
+            if (onTapDown == null) return;
+            checkClickTime(client.id, () {
+              onTapDown.call(details);
+            });
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Offstage(offstage: icon == null, child: icon).marginOnly(right: 6),
+              textWidget,
+            ],
+          ),
         ),
       ),
     );

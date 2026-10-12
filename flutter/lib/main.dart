@@ -308,6 +308,7 @@ showCmWindow({bool isStartup = false}) async {
     WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
         size: kConnectionManagerWindowSizeClosedChat, alwaysOnTop: true);
     await windowManager.waitUntilReadyToShow(windowOptions, null);
+    await windowManager.setBackgroundColor(Colors.transparent);
     bind.mainHideDock();
     await Future.wait([
       windowManager.show(),
@@ -320,6 +321,7 @@ showCmWindow({bool isStartup = false}) async {
     _isCmReadyToShow = true;
   } else if (_isCmReadyToShow) {
     if (await windowManager.getOpacity() != 1) {
+      await windowManager.setBackgroundColor(Colors.transparent);
       await windowManager.setOpacity(1);
       await windowManager.focus();
       await windowManager.minimize(); //needed
