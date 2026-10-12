@@ -265,9 +265,17 @@ class ConnectionManagerState extends State<ConnectionManager>
                                     block: _controlPageBlock,
                                     mask: false,
                                   ))),
-                  ]);
                   return Container(
-                    color: Theme.of(context).scaffoldBackgroundColor,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFF131722),
+                          Color(0xFF0C0E15),
+                        ],
+                      ),
+                    ),
                     child: row,
                   );
                 },
@@ -458,26 +466,26 @@ class _CmHeaderState extends State<_CmHeader>
     final isConnected = client.authorized && !client.disconnected;
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14.0),
+        borderRadius: BorderRadius.circular(16.0),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF1E2638).withOpacity(0.92),
-            const Color(0xFF141824).withOpacity(0.96),
+            Colors.white.withOpacity(0.08),
+            Colors.white.withOpacity(0.03),
           ],
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.12), width: 1),
+        border: Border.all(color: Colors.white.withOpacity(0.14), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       margin: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 8.0),
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.fromLTRB(14.0, 12.0, 12.0, 12.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -637,8 +645,8 @@ class _CmHeaderState extends State<_CmHeader>
   Widget _buildClientAvatar() {
     return buildAvatarWidget(
           avatar: client.avatar,
-          size: 64,
-          borderRadius: 15,
+          size: 48,
+          borderRadius: 24,
           fallback: _buildInitialAvatar(),
         ) ??
         _buildInitialAvatar();
@@ -646,23 +654,23 @@ class _CmHeaderState extends State<_CmHeader>
 
   Widget _buildInitialAvatar() {
     return Container(
-      width: 64,
-      height: 64,
+      width: 48,
+      height: 48,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            MyTheme.accent,
-            MyTheme.accent.withOpacity(0.7),
+            Color(0xFF38BDF8),
+            Color(0xFF2563EB),
           ],
         ),
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
+        border: Border.all(color: Colors.white.withOpacity(0.35), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: MyTheme.accent.withOpacity(0.3),
+            color: const Color(0xFF38BDF8).withOpacity(0.35),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -671,9 +679,9 @@ class _CmHeaderState extends State<_CmHeader>
       child: Text(
         client.name.isNotEmpty ? client.name[0].toUpperCase() : '?',
         style: const TextStyle(
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
           color: Colors.white,
-          fontSize: 32,
+          fontSize: 22,
         ),
       ),
     );
@@ -698,48 +706,59 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
       message: "$tooltipText: ${enabled ? "ON" : "OFF"}",
       waitDuration: Duration.zero,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 220),
         decoration: BoxDecoration(
-          color: enabled
-              ? (canModify
-                  ? MyTheme.accent.withOpacity(0.22)
-                  : MyTheme.accent.withOpacity(0.14))
-              : Colors.white.withOpacity(0.04),
-          borderRadius: BorderRadius.circular(12.0),
+          gradient: enabled
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF0284C7).withOpacity(0.30),
+                    const Color(0xFF0369A1).withOpacity(0.12),
+                  ],
+                )
+              : LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.04),
+                    Colors.white.withOpacity(0.015),
+                  ],
+                ),
+          borderRadius: BorderRadius.circular(11.0),
           border: Border.all(
             color: enabled
-                ? MyTheme.accent.withOpacity(0.55)
+                ? const Color(0xFF38BDF8).withOpacity(0.42)
                 : Colors.white.withOpacity(0.08),
-            width: 1.0,
+            width: 0.9,
           ),
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: MyTheme.accent.withOpacity(0.2),
+                    color: const Color(0xFF0284C7).withOpacity(0.22),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   )
                 ]
               : null,
         ),
-        padding: const EdgeInsets.all(8.0),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12.0),
-          onTap: canModify
-              ? () =>
-                  checkClickTime(widget.client.id, () => onTap?.call(!enabled))
-              : null,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Icon(
-                  iconData,
-                  color: enabled ? MyTheme.accent : Colors.white38,
-                  size: 22,
-                ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(11.0),
+            onTap: canModify
+                ? () => checkClickTime(
+                    widget.client.id, () => onTap?.call(!enabled))
+                : null,
+            child: Center(
+              child: Icon(
+                iconData,
+                color: enabled
+                    ? const Color(0xFF7DD3FC)
+                    : Colors.white.withOpacity(0.32),
+                size: 20,
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -755,18 +774,25 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
             'N';
     return Container(
       width: double.infinity,
-      height: 164.0,
+      height: 142.0,
       margin: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 6.0),
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+      padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 8.0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14.0),
-        color: const Color(0xFF161B26).withOpacity(0.7),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        borderRadius: BorderRadius.circular(16.0),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.06),
+            Colors.white.withOpacity(0.02),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -774,15 +800,15 @@ class _PrivilegeBoardState extends State<_PrivilegeBoard> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            translate("Permissions"),
+            translate("Permissions").toUpperCase(),
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withOpacity(0.85),
-              letterSpacing: 0.5,
+              color: Colors.white.withOpacity(0.55),
+              letterSpacing: 1.2,
             ),
             textAlign: TextAlign.center,
-          ).marginOnly(bottom: 8.0),
+          ).marginOnly(bottom: 6.0),
           Expanded(
             child: GridView.count(
               crossAxisCount: crossAxisCount,
@@ -1131,17 +1157,17 @@ class _CmControlPanel extends StatelessWidget {
             Expanded(
               child: buildButton(
                 context,
-                color: const Color(0xFFEF4444).withOpacity(0.15),
+                color: const Color(0xFFEF4444).withOpacity(0.12),
                 border: Border.all(
-                    color: const Color(0xFFEF4444).withOpacity(0.4), width: 1),
+                    color: const Color(0xFFEF4444).withOpacity(0.28), width: 1),
                 onClick: handleDisconnect,
                 text: 'Disconnect',
                 icon: const Icon(
                   Icons.link_off_rounded,
-                  color: Color(0xFFF87171),
+                  color: Color(0xFFFCA5A5),
                   size: 16,
                 ),
-                textColor: const Color(0xFFF87171),
+                textColor: const Color(0xFFFCA5A5),
               ),
             ),
           ],
@@ -1255,11 +1281,22 @@ class _CmControlPanel extends StatelessWidget {
         ),
       );
     }
-    final borderRadius = BorderRadius.circular(12.0);
+    final borderRadius = BorderRadius.circular(14.0);
     final btn = Container(
-      height: 36,
+      height: 38,
+      margin: const EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
-          color: color, borderRadius: borderRadius, border: border),
+        color: color,
+        borderRadius: borderRadius,
+        border: border,
+        boxShadow: [
+          BoxShadow(
+            color: (color ?? Colors.transparent).withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: InkWell(
         borderRadius: borderRadius,
         onTap: () {
