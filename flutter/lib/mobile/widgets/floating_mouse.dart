@@ -1191,10 +1191,8 @@ class CursorPaint extends StatelessWidget {
     if (image == null) {
       if (preDefaultCursor.image != null) {
         image = preDefaultCursor.image;
-        // hotx = preDefaultCursor.image!.width / 2;
-        // hoty = preDefaultCursor.image!.height / 2;
-        hotx = 0;
-        hoty = 0;
+        hotx = preDefaultCursor.image!.width / 2;
+        hoty = preDefaultCursor.image!.height / 2;
       }
     }
     if (image == null) {
