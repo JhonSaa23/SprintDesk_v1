@@ -3027,8 +3027,10 @@ const kPreDefaultCursorId = "-1";
 final preDefaultCursor = PredefinedCursor(
   png: _defaultCursorPng,
   id: kPreDefaultCursorId,
-  hotxGetter: (double w) => w / 2,
-  hotyGetter: (double h) => h / 2,
+  // hotxGetter: (double w) => w / 2,
+  // hotyGetter: (double h) => h / 2,
+  hotxGetter: (double w) => 0,
+  hotyGetter: (double h) => 0,
 );
 
 class PredefinedCursor {
