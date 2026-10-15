@@ -8,6 +8,8 @@ import 'package:flutter_hbb/desktop/widgets/header_connect_bar.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
+import 'package:flutter_hbb/models/plan_model.dart';
+import 'package:flutter_hbb/desktop/widgets/plans_dialog.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
 // import 'package:flutter/services.dart';
@@ -105,6 +107,7 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const UpgradePlanHeaderChip(),
                     Obx(() {
                       final user = gFFI.userModel;
                       if (user.userName.value.isEmpty) {
@@ -196,5 +199,67 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
               child: tabWidget,
             ),
           );
+  }
+}
+
+class UpgradePlanHeaderChip extends StatelessWidget {
+  const UpgradePlanHeaderChip({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final plan = PlanModel.instance;
+      final isPaid = plan.isPaidPlan;
+      final isTeam = plan.planType.value == PlanType.proTeam;
+      final label = isPaid
+          ? (isTeam ? "Plan Pro Equipo" : "Plan Individual")
+          : "Actualizar planes";
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(17),
+          onTap: () => showPlansDialog(context),
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: isPaid
+                  ? const Color(0xFF10B981).withOpacity(0.16)
+                  : const Color(0xFFF59E0B).withOpacity(0.18),
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(
+                color: isPaid
+                    ? const Color(0xFF10B981).withOpacity(0.4)
+                    : const Color(0xFFF59E0B).withOpacity(0.45),
+                width: 1.2,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPaid ? Icons.verified_user_rounded : Icons.star_rounded,
+                  size: 16,
+                  color: isPaid
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isPaid
+                        ? const Color(0xFF10B981)
+                        : const Color(0xFFF59E0B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
   }
 }

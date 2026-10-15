@@ -20,5 +20,9 @@ class AppDelegate: FlutterAppDelegate {
     override func applicationDidFinishLaunching(_ aNotification: Notification) {
         launched = true;
         NSApplication.shared.activate(ignoringOtherApps: true);
+        if let iconPath = Bundle.main.path(forResource: "AppIcon", ofType: "icns"),
+           let iconImage = NSImage(contentsOfFile: iconPath) {
+            NSApplication.shared.applicationIconImage = iconImage
+        }
     }
 }

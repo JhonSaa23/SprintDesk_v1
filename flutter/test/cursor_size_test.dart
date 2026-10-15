@@ -354,10 +354,11 @@ Future<void> _checkView(WidgetTester tester, (String, bool) mode,
     ));
     final video = tester.widget<CustomPaint>(find.byType(CustomPaint)).painter
         as ImagePainter;
-    final scale = video.scale * (mode.$2 ? 1.0 : 1.0 / (canvas.scale * dpr));
+    final shouldZoom = mode.$2 || mode.$1 == kRemoteViewStyleAdaptive;
+    final scale = video.scale * (shouldZoom ? 1.0 : 1.0 / (canvas.scale * dpr));
     final size = sourceSize * (peer == kPeerPlatformMacOS ? peerScale : 1.0);
     final w = peer == kPeerPlatformMacOS &&
-            !mode.$2 &&
+            !shouldZoom &&
             mode.$1 != kRemoteViewStyleOriginal
         ? (sourceSize * (Platform.isWindows ? dpr : 1.0)).ceil()
         : (size * scale * (Platform.isWindows ? dpr : 1.0)).ceil();

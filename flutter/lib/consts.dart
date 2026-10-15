@@ -7,7 +7,8 @@ import 'package:get/get.dart';
 const int kMaxVirtualDisplayCount = 4;
 const int kAllVirtualDisplay = -1;
 
-const double kDesktopRemoteTabBarHeight = 28.0;
+// const double kDesktopRemoteTabBarHeight = 28.0;
+const double kDesktopRemoteTabBarHeight = 38.0;
 const int kInvalidWindowId = -1;
 const int kMainWindowId = 0;
 

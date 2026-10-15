@@ -22,6 +22,8 @@ import 'package:bot_toast/bot_toast.dart';
 
 import '../../common/widgets/dialog.dart';
 import '../../models/platform_model.dart';
+import '../../models/plan_model.dart';
+import '../widgets/plans_dialog.dart';
 
 class _MenuTheme {
   static const Color blueColor = MyTheme.button;
@@ -142,6 +144,28 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           children: [
             _RelativeMouseModeHint(tabController: tabController),
             RemoteHeaderActions(tabController: tabController),
+            SessionCountdownBadge(
+              tabController: tabController,
+              onExpire: () async {
+                try {
+                  await DesktopMultiWindow.invokeMethod(
+                    kMainWindowId,
+                    'kWindowSessionExpiredFreePlan',
+                    '',
+                  );
+                } catch (_) {}
+                final tabKeys =
+                    tabController.state.value.tabs.map((t) => t.key).toList();
+                for (final key in tabKeys) {
+                  tabController.closeBy(key);
+                }
+                try {
+                  final windowController =
+                      WindowController.fromWindowId(windowId());
+                  await windowController.close();
+                } catch (_) {}
+              },
+            ),
             const NewSessionChip(),
           ],
         ),
@@ -430,6 +454,10 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
     dynamic returnValue;
     // for simplify, just replace connectionId
     if (call.method == kWindowEventNewRemoteDesktop) {
+      if (tabController.length >= PlanModel.instance.maxConcurrentSessions) {
+        showConcurrentLimitDialog(context);
+        return false;
+      }
       final args = jsonDecode(call.arguments);
       final id = args['id'];
       final switchUuid = args['switch_uuid'];
@@ -627,3 +655,183 @@ class _RelativeMouseModeHint extends StatelessWidget {
     });
   }
 }
+
+class SessionCountdownBadge extends StatefulWidget {
+  final DesktopTabController tabController;
+  final VoidCallback? onExpire;
+
+  const SessionCountdownBadge({
+    Key? key,
+    required this.tabController,
+    this.onExpire,
+  }) : super(key: key);
+
+  @override
+  State<SessionCountdownBadge> createState() => _SessionCountdownBadgeState();
+}
+
+class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
+  int _remainingSeconds = 300; // 5 minutes
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    PlanModel.instance.init();
+    if (!PlanModel.instance.isPaidPlan) {
+      _startCountdown();
+    }
+  }
+
+  void _startCountdown() {
+    _timer?.cancel();
+    _remainingSeconds = 300;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (PlanModel.instance.isPaidPlan) {
+        timer.cancel();
+        if (mounted) setState(() {});
+        return;
+      }
+      if (_remainingSeconds > 0) {
+        if (mounted) {
+          setState(() {
+            _remainingSeconds--;
+          });
+        }
+      } else {
+        timer.cancel();
+        _onTimeExpired();
+      }
+    });
+  }
+
+  void _onTimeExpired() {
+    _timer?.cancel();
+    if (!mounted) return;
+    if (widget.onExpire != null) {
+      widget.onExpire!();
+    } else {
+      final tabKeys =
+          widget.tabController.state.value.tabs.map((t) => t.key).toList();
+      for (final key in tabKeys) {
+        widget.tabController.closeBy(key);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final plan = PlanModel.instance;
+      if (plan.isPaidPlan) {
+        final isTeam = plan.planType.value == PlanType.proTeam;
+        final label = isTeam
+            ? "Pro Equipo • 10 Máx • Ilimitado"
+            : "Individual • 3 Máx • Ilimitado";
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withOpacity(0.16),
+              borderRadius: BorderRadius.circular(12),
+              border:
+                  Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.all_inclusive_rounded,
+                    size: 13, color: Color(0xFF10B981)),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      final minutes = (_remainingSeconds ~/ 60).toString().padLeft(2, '0');
+      final seconds = (_remainingSeconds % 60).toString().padLeft(2, '0');
+      final isWarning = _remainingSeconds <= 60;
+
+      return Tooltip(
+        message:
+            "Límite del Plan Gratuito (5 minutos máx). Haz clic para actualizar a Pro.",
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => showPlansDialog(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: isWarning
+                    ? const Color(0xFFEF4444).withOpacity(0.22)
+                    : const Color(0xFFF59E0B).withOpacity(0.18),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isWarning
+                      ? const Color(0xFFEF4444).withOpacity(0.6)
+                      : const Color(0xFFF59E0B).withOpacity(0.45),
+                  width: 1.2,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isWarning
+                        ? Icons.warning_amber_rounded
+                        : Icons.timer_outlined,
+                    size: 13,
+                    color: isWarning
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "$minutes:$seconds",
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isWarning
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFFF59E0B),
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    "(Gratis)",
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: isWarning
+                          ? const Color(0xFFEF4444).withOpacity(0.85)
+                          : const Color(0xFFF59E0B).withOpacity(0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
+

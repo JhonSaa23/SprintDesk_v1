@@ -20,6 +20,8 @@ import 'package:window_manager/window_manager.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../utils/multi_window_manager.dart';
+import '../../models/plan_model.dart';
+import 'plans_dialog.dart';
 
 const double _kTabBarHeight = kDesktopRemoteTabBarHeight;
 const double _kIconSize = 18;
@@ -1397,8 +1399,16 @@ class NewSessionChip extends StatelessWidget {
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () => rustDeskWinManager.call(
-              WindowType.Main, kWindowMainWindowOnTop, ""),
+          onTap: () {
+            final active = rustDeskWinManager.activeRemoteSessionCount;
+            final maxAllowed = PlanModel.instance.maxConcurrentSessions;
+            if (active >= maxAllowed) {
+              showConcurrentLimitDialog(context);
+              return;
+            }
+            rustDeskWinManager.call(
+                WindowType.Main, kWindowMainWindowOnTop, "");
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(

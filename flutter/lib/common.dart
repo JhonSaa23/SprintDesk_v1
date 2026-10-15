@@ -41,6 +41,8 @@ import 'desktop/pages/view_camera_page.dart' as desktop_view_camera;
 import 'package:flutter_hbb/desktop/widgets/remote_toolbar.dart';
 import 'models/model.dart';
 import 'models/platform_model.dart';
+import 'models/plan_model.dart';
+import 'desktop/widgets/plans_dialog.dart';
 
 import 'package:flutter_hbb/native/win32.dart'
     if (dart.library.html) 'package:flutter_hbb/web/win32.dart';
@@ -2580,6 +2582,12 @@ connectMainDesktop(String id,
         connToken: connToken,
         forceRelay: forceRelay);
   } else {
+    final activeCount = rustDeskWinManager.activeRemoteSessionCount;
+    final maxAllowed = PlanModel.instance.maxConcurrentSessions;
+    if (activeCount >= maxAllowed) {
+      showConcurrentLimitDialog();
+      return;
+    }
     await rustDeskWinManager.newRemoteDesktop(id,
         password: password,
         isSharedPassword: isSharedPassword,

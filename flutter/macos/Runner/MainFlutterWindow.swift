@@ -92,6 +92,10 @@ class MainFlutterWindow: NSWindow {
     }
 
     override func awakeFromNib() {
+        if let iconPath = Bundle.main.path(forResource: "AppIcon", ofType: "icns"),
+           let iconImage = NSImage(contentsOfFile: iconPath) {
+            NSApplication.shared.applicationIconImage = iconImage
+        }
         rustdesk_core_main();
         _ = MainFlutterWindow.fullscreenObserver
         let flutterViewController = FlutterViewController.init()

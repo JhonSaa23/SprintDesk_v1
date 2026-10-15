@@ -576,6 +576,19 @@ class RustDeskMultiWindowManager {
     }
     return coords;
   }
+
+  bool hasActiveRemoteSessions() {
+    return _remoteDesktopWindows
+        .any((windowId) => _activeWindows.contains(windowId));
+  }
+
+  int get activeRemoteSessionCount {
+    int count = 0;
+    for (final windowId in _remoteDesktopWindows) {
+      if (_activeWindows.contains(windowId)) count++;
+    }
+    return count;
+  }
 }
 
 final rustDeskWinManager = RustDeskMultiWindowManager.instance;

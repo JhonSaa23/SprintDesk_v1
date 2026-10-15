@@ -19,6 +19,8 @@ import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:flutter_hbb/utils/multi_window_manager.dart';
 import 'package:flutter_hbb/utils/platform_channel.dart';
+import 'package:flutter_hbb/models/plan_model.dart';
+import 'package:flutter_hbb/desktop/widgets/plans_dialog.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -53,6 +55,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
+  final RxBool _showAboutSprintDesk = false.obs;
 
   final GlobalKey _childKey = GlobalKey();
 
@@ -61,14 +64,44 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
     return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
-    ));
+      child: Stack(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildLeftPane(context),
+              if (!isIncomingOnly) const VerticalDivider(width: 1),
+              if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
+            ],
+          ),
+          Obx(() {
+            if (!_showAboutSprintDesk.value) return const SizedBox.shrink();
+            return Positioned.fill(
+              left: isIncomingOnly ? 300.0 : 285.0,
+              child: GestureDetector(
+                onTap: () => _showAboutSprintDesk.value = false,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  color: Colors.black.withOpacity(0.4),
+                ),
+              ),
+            );
+          }),
+          Obx(() {
+            final isVisible = _showAboutSprintDesk.value;
+            return AnimatedPositioned(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              top: 0,
+              bottom: 0,
+              right: isVisible ? 0 : -470,
+              width: 450,
+              child: buildAboutSprintDeskPanel(context),
+            );
+          }),
+        ],
+      ),
+    );
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -87,6 +120,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ),
       if (!isOutgoingOnly) buildUnifiedWorkstationCard(context),
       if (!isOutgoingOnly) buildTelemetryCard(context),
+      if (!isOutgoingOnly) buildPlansCard(context),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -130,14 +164,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           children: [
             Column(
               children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _leftPaneScrollController,
+                    child: Column(
+                      key: _childKey,
+                      children: children,
+                    ),
                   ),
                 ),
-                Expanded(child: Container())
+                if (!isOutgoingOnly) buildSidebarAboutButton(context),
               ],
             ),
             if (isOutgoingOnly)
@@ -604,6 +640,132 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  Widget buildPlansCard(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    return Obx(() {
+      final plan = PlanModel.instance;
+      final isPaid = plan.isPaidPlan;
+      final planType = plan.planType.value;
+      final isTeam = planType == PlanType.proTeam;
+
+      final title = isPaid
+          ? (isTeam ? "Plan Pro Equipo Activo" : "Plan Individual Activo")
+          : "Actualizar planes";
+      final badgeText = isPaid ? (isTeam ? "EQUIPO" : "INDIVIDUAL") : "GRATIS";
+      final description = isPaid
+          ? (isTeam
+              ? "10 máquinas simultáneas en paralelo, 5 usuarios y tiempo ilimitado."
+              : "3 máquinas simultáneas en paralelo y tiempo de sesión ilimitado.")
+          : "Individual (\$11.90/mes, 3 máquinas) o Pro Equipo (\$45.90/mes, 10 máquinas y 5 usuarios).";
+
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isPaid
+              ? const Color(0xFF10B981).withOpacity(0.08)
+              : MyTheme.accent.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isPaid
+                ? const Color(0xFF10B981).withOpacity(0.35)
+                : MyTheme.accent.withOpacity(0.25),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isPaid
+                      ? Icons.verified_user_rounded
+                      : Icons.workspace_premium_rounded,
+                  size: 16,
+                  color: isPaid
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isPaid
+                        ? const Color(0xFF10B981).withOpacity(0.2)
+                        : Colors.orange.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: isPaid ? const Color(0xFF10B981) : Colors.orange,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 11,
+                color: textColor?.withOpacity(0.7),
+                height: 1.3,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 30,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isPaid
+                      ? Colors.white.withOpacity(0.08)
+                      : MyTheme.accent,
+                  foregroundColor: isPaid ? textColor : Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: isPaid
+                        ? BorderSide(color: Colors.white.withOpacity(0.12))
+                        : BorderSide.none,
+                  ),
+                  padding: EdgeInsets.zero,
+                ),
+                onPressed: () => showPlansDialog(context),
+                child: Text(
+                  isPaid ? "Gestionar suscripción" : "Ver planes y suscribirse",
+                  style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
   buildTip(BuildContext context) {
     final isOutgoingOnly = bind.isOutgoingOnly();
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
@@ -1066,6 +1228,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           forceRelay: call.arguments['forceRelay'],
           connToken: call.arguments['connToken'],
         );
+      } else if (call.method == 'kWindowSessionExpiredFreePlan') {
+        showToast("Tu sesión de 5 min (Plan Gratuito) ha finalizado. Puedes volver a conectarte inmediatamente.");
       } else if (call.method == kWindowBumpMouse) {
         return RdPlatformChannel.instance.bumpMouse(
           dx: call.arguments['dx'],
@@ -1139,12 +1303,471 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed) {
-      shouldBeBlocked(_block, canBeBlocked);
-    }
+  Widget buildSidebarAboutButton(BuildContext context) {
+    return Obx(() {
+      final isOpen = _showAboutSprintDesk.value;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.background,
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.06)),
+          ),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            _showAboutSprintDesk.value = !_showAboutSprintDesk.value;
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+              color: isOpen
+                  ? MyTheme.accent.withOpacity(0.18)
+                  : const Color(0xFF1B202A),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isOpen
+                    ? MyTheme.accent.withOpacity(0.6)
+                    : Colors.white.withOpacity(0.08),
+                width: 1.2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: isOpen
+                        ? MyTheme.accent.withOpacity(0.2)
+                        : const Color(0xFF10B981).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Icon(
+                    Icons.security_rounded,
+                    size: 16,
+                    color: isOpen ? MyTheme.accent : const Color(0xFF10B981),
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "Sobre SprintDesk",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isOpen ? Colors.white : Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                      Text(
+                        "Seguridad & Servidor Propio",
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          color: Colors.white.withOpacity(0.55),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  isOpen
+                      ? Icons.arrow_back_ios_new_rounded
+                      : Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: isOpen ? MyTheme.accent : Colors.white.withOpacity(0.4),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget buildAboutSprintDeskPanel(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF151821),
+        border: Border(
+          left: BorderSide(color: Colors.white.withOpacity(0.12), width: 1.2),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.65),
+            blurRadius: 28,
+            offset: const Offset(-8, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1D222E),
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.08)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.security_rounded,
+                    size: 18,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Sobre SprintDesk",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        "Arquitectura, Seguridad y Servidor Propio",
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.white.withOpacity(0.55),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => _showAboutSprintDesk.value = false,
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: Colors.white.withOpacity(0.6),
+                    size: 18,
+                  ),
+                  splashRadius: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: "Cerrar panel",
+                ),
+              ],
+            ),
+          ),
+
+          // Scrollable Body
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.4),
+                      ),
+                    ),
+                    child: const Text(
+                      "INFORME TÉCNICO DE SEGURIDAD EMPRESARIAL",
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF10B981),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Intro
+                  const Text(
+                    "¿Qué es SprintDesk?",
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "SprintDesk es una solución profesional de escritorio y asistencia remota de ultra alto rendimiento, diseñada con estrictos estándares de ciberseguridad, privacidad y control para empresas y entornos de trabajo corporativos.",
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.45,
+                      color: Colors.white.withOpacity(0.78),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Critical Vulnerability Box (RustDesk)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444).withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              size: 18,
+                              color: Color(0xFFEF4444),
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                "La Realidad sobre RustDesk y su Vulnerabilidad",
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFEF4444),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "SprintDesk fue creado como un fork tecnológico a partir del motor de RustDesk. Sin embargo, es vital que las empresas conozcan que el sistema de RustDesk en su esquema público es sumamente vulnerable y NADA SEGURO para uso empresarial ni fines comerciales.",
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildWarningItem(
+                          title: "Exposición Crítica de Direcciones IP",
+                          description:
+                              "En RustDesk, la dirección IP pública y local de las computadoras queda completamente expuesta durante la negociación de conexiones (rendezvous).",
+                        ),
+                        const SizedBox(height: 8),
+                        _buildWarningItem(
+                          title: "Falsa Seguridad con Contraseñas",
+                          description:
+                              "Por más clave o contraseña compleja que configures en RustDesk, cualquier persona con un mínimo conocimiento técnico o herramientas básicas de sniffing puede capturar la IP de tu equipo y ejecutar ataques directos de intrusión a tu red.",
+                        ),
+                        const SizedBox(height: 8),
+                        _buildWarningItem(
+                          title: "Riesgo Inaceptable para Empresas",
+                          description:
+                              "Usar servidores públicos compartidos o clientes sin blindaje expone la red corporativa, datos de clientes y secretos comerciales a ciberataques dirigidos.",
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // SprintDesk Solution Box
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withOpacity(0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              size: 18,
+                              color: Color(0xFF10B981),
+                            ),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                "Por qué SprintDesk en Servidor Propio es la Mejor Opción",
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Si eres una empresa o institución, SprintDesk es la alternativa comercial definitiva, segura y 100% aislada:",
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            height: 1.4,
+                            color: Colors.white.withOpacity(0.85),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildFeatureItem(
+                          icon: Icons.dns_rounded,
+                          title: "Servidor Propio Dedicado",
+                          description:
+                              "Todo el tráfico y mediación se realizan en servidores privados propios, sin depender de redes públicas compartidas ni intermediarios vulnerables.",
+                        ),
+                        const SizedBox(height: 8),
+                        _buildFeatureItem(
+                          icon: Icons.visibility_off_rounded,
+                          title: "Ocultamiento y Aislamiento de IPs",
+                          description:
+                              "La IP de tus terminales nunca queda al descubierto. Tus equipos permanecen completamente invisibles ante terceros y atacantes externos.",
+                        ),
+                        const SizedBox(height: 8),
+                        _buildFeatureItem(
+                          icon: Icons.vpn_lock_rounded,
+                          title: "Cifrado Militar de Extremo a Extremo",
+                          description:
+                              "Algoritmos criptográficos Ed25519 y ChaCha20-Poly1305 blindan la transferencia de video, audio, archivos y teclado.",
+                        ),
+                        const SizedBox(height: 8),
+                        _buildFeatureItem(
+                          icon: Icons.business_center_rounded,
+                          title: "Planes Comerciales y Soporte",
+                          description:
+                              "Sesiones remotas paralelas, tiempo ilimitado y gestión centralizada mediante credenciales comerciales para equipos de TI.",
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // CTA Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: MyTheme.accent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        _showAboutSprintDesk.value = false;
+                        showPlansDialog(context);
+                      },
+                      icon: const Icon(Icons.workspace_premium_rounded, size: 18),
+                      label: const Text(
+                        "Ver Planes y Credenciales Corporativas",
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWarningItem({required String title, required String description}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 4),
+          width: 5,
+          height: 5,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFFEF4444),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.35,
+                color: Colors.white.withOpacity(0.85),
+              ),
+              children: [
+                TextSpan(
+                  text: "$title: ",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFEF4444),
+                  ),
+                ),
+                TextSpan(text: description),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureItem({
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 15, color: const Color(0xFF10B981)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.35,
+                color: Colors.white.withOpacity(0.85),
+              ),
+              children: [
+                TextSpan(
+                  text: "$title: ",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+                TextSpan(text: description),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 

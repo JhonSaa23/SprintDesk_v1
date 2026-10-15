@@ -45,7 +45,7 @@ class _HeaderConnectBarState extends State<HeaderConnectBar> {
       borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
     );
     return Container(
-      width: 440,
+      constraints: const BoxConstraints(maxWidth: 420, minWidth: 180),
       height: 42,
       margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
       child: TextField(
