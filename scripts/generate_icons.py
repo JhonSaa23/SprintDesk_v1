@@ -60,9 +60,12 @@ print("Generating Windows .ico files...")
 win_sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 for target in [
     os.path.join(ROOT, 'flutter/windows/runner/resources/app_icon.ico'),
+    os.path.join(ROOT, 'flutter/assets/icon.ico'),
     os.path.join(ROOT, 'res/icon.ico'),
     os.path.join(ROOT, 'res/tray-icon.ico'),
+    os.path.join(ROOT, 'res/msi/Package/Resources/icon.ico'),
 ]:
+    os.makedirs(os.path.dirname(target), exist_ok=True)
     master_icon.save(target, format='ICO', sizes=win_sizes)
 
 # 4. Linux and generic res files
