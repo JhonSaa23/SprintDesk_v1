@@ -1400,6 +1400,7 @@ class NewSessionChip extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () {
+            PlanModel.instance.init();
             final active = rustDeskWinManager.activeRemoteSessionCount;
             final maxAllowed = PlanModel.instance.maxConcurrentSessions;
             if (active >= maxAllowed) {

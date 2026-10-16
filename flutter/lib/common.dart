@@ -2582,6 +2582,7 @@ connectMainDesktop(String id,
         connToken: connToken,
         forceRelay: forceRelay);
   } else {
+    PlanModel.instance.init();
     final activeCount = rustDeskWinManager.activeRemoteSessionCount;
     final maxAllowed = PlanModel.instance.maxConcurrentSessions;
     if (activeCount >= maxAllowed) {

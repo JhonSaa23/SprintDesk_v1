@@ -1230,6 +1230,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         );
       } else if (call.method == 'kWindowSessionExpiredFreePlan') {
         showToast("Tu sesión de 5 min (Plan Gratuito) ha finalizado. Puedes volver a conectarte inmediatamente.");
+      } else if (call.method == kWindowPlanUpdated) {
+        PlanModel.instance.init();
+        return true;
       } else if (call.method == kWindowBumpMouse) {
         return RdPlatformChannel.instance.bumpMouse(
           dx: call.arguments['dx'],

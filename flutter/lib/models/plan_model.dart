@@ -1,4 +1,6 @@
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:get/get.dart';
 
@@ -40,17 +42,51 @@ class PlanModel {
   static PlanType? detectPlanFromKey(String key) {
     final clean = key.trim().toUpperCase();
     if (clean.isEmpty) return null;
-    if (individualKeys.contains(clean) ||
-        clean.startsWith('SD11-') ||
-        clean.startsWith('IND-')) {
+
+    if (individualKeys.contains(clean)) return PlanType.individual;
+    if (proTeamKeys.contains(clean)) return PlanType.proTeam;
+
+    final normalized = clean
+        .replaceAll('-', '')
+        .replaceAll(' ', '')
+        .replaceAll('_', '')
+        .replaceAll('.', '');
+
+    final normalizedIndKeys = individualKeys
+        .map((k) => k
+            .replaceAll('-', '')
+            .replaceAll(' ', '')
+            .replaceAll('_', '')
+            .replaceAll('.', ''))
+        .toSet();
+    final normalizedProKeys = proTeamKeys
+        .map((k) => k
+            .replaceAll('-', '')
+            .replaceAll(' ', '')
+            .replaceAll('_', '')
+            .replaceAll('.', ''))
+        .toSet();
+
+    if (normalizedIndKeys.contains(normalized)) return PlanType.individual;
+    if (normalizedProKeys.contains(normalized)) return PlanType.proTeam;
+
+    if (normalized.startsWith('SD11') ||
+        normalized.startsWith('IND') ||
+        normalized == 'IND' ||
+        normalized == 'INDIVIDUAL') {
       return PlanType.individual;
     }
-    if (proTeamKeys.contains(clean) ||
-        clean.startsWith('SD45-') ||
-        clean.startsWith('TEAM-') ||
-        clean.startsWith('PRO-')) {
+
+    if (normalized.startsWith('SD45') ||
+        normalized.startsWith('PRO') ||
+        normalized.startsWith('TEAM') ||
+        normalized.startsWith('EQUIPO') ||
+        normalized == 'PRO' ||
+        normalized == 'EQUIPO' ||
+        normalized == 'TEAM') {
       return PlanType.proTeam;
     }
+
     return null;
   }
 
@@ -67,10 +103,10 @@ class PlanModel {
       }
     }
 
-    if (savedType == 'individual') {
+    if (savedType == 'individual' || savedType == 'PlanType.individual') {
       planType.value = PlanType.individual;
       licenseKey.value = savedKey;
-    } else if (savedType == 'proTeam') {
+    } else if (savedType == 'proTeam' || savedType == 'PlanType.proTeam') {
       planType.value = PlanType.proTeam;
       licenseKey.value = savedKey;
     } else {
@@ -92,7 +128,6 @@ class PlanModel {
       case PlanType.proTeam:
         return 10;
       case PlanType.free:
-      default:
         return 1;
     }
   }
@@ -103,7 +138,6 @@ class PlanModel {
         return 5;
       case PlanType.individual:
       case PlanType.free:
-      default:
         return 1;
     }
   }
@@ -117,9 +151,25 @@ class PlanModel {
       case PlanType.proTeam:
         return "Plan Pro Equipo";
       case PlanType.free:
-      default:
         return "Plan Gratuito";
     }
+  }
+
+  Future<void> broadcastPlanUpdate() async {
+    if (!isDesktop) return;
+    try {
+      await DesktopMultiWindow.invokeMethod(
+          kMainWindowId, kWindowPlanUpdated, '');
+    } catch (_) {}
+
+    try {
+      final subWindowIds = await DesktopMultiWindow.getAllSubWindowIds();
+      for (final id in subWindowIds) {
+        try {
+          await DesktopMultiWindow.invokeMethod(id, kWindowPlanUpdated, '');
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   Future<bool> activateLicense(String key) async {
@@ -128,9 +178,11 @@ class PlanModel {
     if (detected != null) {
       planType.value = detected;
       licenseKey.value = clean;
-      final typeString = detected == PlanType.individual ? 'individual' : 'proTeam';
+      final typeString =
+          detected == PlanType.individual ? 'individual' : 'proTeam';
       await bind.mainSetLocalOption(key: kOptionPlanLicense, value: clean);
       await bind.mainSetLocalOption(key: kOptionPlanType, value: typeString);
+      await broadcastPlanUpdate();
       return true;
     }
     return false;
@@ -141,5 +193,6 @@ class PlanModel {
     licenseKey.value = '';
     await bind.mainSetLocalOption(key: kOptionPlanLicense, value: '');
     await bind.mainSetLocalOption(key: kOptionPlanType, value: 'free');
+    await broadcastPlanUpdate();
   }
 }

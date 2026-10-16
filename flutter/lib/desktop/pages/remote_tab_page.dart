@@ -457,6 +457,7 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
     dynamic returnValue;
     // for simplify, just replace connectionId
     if (call.method == kWindowEventNewRemoteDesktop) {
+      PlanModel.instance.init();
       if (tabController.length >= PlanModel.instance.maxConcurrentSessions) {
         showConcurrentLimitDialog(context);
         return false;
@@ -511,6 +512,10 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
           isSharedPassword: args['isSharedPassword'],
         ),
       ));
+    } else if (call.method == kWindowPlanUpdated) {
+      PlanModel.instance.init();
+      if (mounted) setState(() {});
+      return true;
     } else if (call.method == kWindowDisableGrabKeyboard) {
       // ???
     } else if (call.method == "onDestroy") {
@@ -688,6 +693,13 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
       _startCountdown();
     }
     _tabSubscription = widget.tabController.state.listen((tabState) {
+      PlanModel.instance.init();
+      if (PlanModel.instance.isPaidPlan) {
+        _timer?.cancel();
+        if (mounted) setState(() {});
+        return;
+      }
+
       final currentKeys = tabState.tabs.map((t) => t.key).toSet();
       if (currentKeys.isEmpty) {
         _timer?.cancel();
@@ -717,6 +729,11 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
 
   void _startCountdown() {
     _timer?.cancel();
+    PlanModel.instance.init();
+    if (PlanModel.instance.isPaidPlan) {
+      if (mounted) setState(() {});
+      return;
+    }
     _remainingSeconds = 300;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (PlanModel.instance.isPaidPlan) {
@@ -731,6 +748,12 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
           });
         }
       } else {
+        PlanModel.instance.init();
+        if (PlanModel.instance.isPaidPlan) {
+          timer.cancel();
+          if (mounted) setState(() {});
+          return;
+        }
         timer.cancel();
         _onTimeExpired();
       }
@@ -768,6 +791,7 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
     return Obx(() {
       final plan = PlanModel.instance;
       if (plan.isPaidPlan) {
+        _timer?.cancel();
         final isTeam = plan.planType.value == PlanType.proTeam;
         final label = isTeam
             ? "Pro Equipo • 10 Máx • Ilimitado"
