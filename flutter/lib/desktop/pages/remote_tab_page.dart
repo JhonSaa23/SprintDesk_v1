@@ -160,6 +160,9 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
                   tabController.closeBy(key);
                 }
                 try {
+                  tabController.clear();
+                } catch (_) {}
+                try {
                   final windowController =
                       WindowController.fromWindowId(windowId());
                   await windowController.close();
@@ -673,14 +676,43 @@ class SessionCountdownBadge extends StatefulWidget {
 class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
   int _remainingSeconds = 300; // 5 minutes
   Timer? _timer;
+  StreamSubscription? _tabSubscription;
+  final Set<String> _activeTabs = {};
 
   @override
   void initState() {
     super.initState();
     PlanModel.instance.init();
-    if (!PlanModel.instance.isPaidPlan) {
+    _activeTabs.addAll(widget.tabController.state.value.tabs.map((t) => t.key));
+    if (!PlanModel.instance.isPaidPlan && _activeTabs.isNotEmpty) {
       _startCountdown();
     }
+    _tabSubscription = widget.tabController.state.listen((tabState) {
+      final currentKeys = tabState.tabs.map((t) => t.key).toSet();
+      if (currentKeys.isEmpty) {
+        _timer?.cancel();
+        _activeTabs.clear();
+        _remainingSeconds = 300;
+        if (mounted) setState(() {});
+        return;
+      }
+
+      final hasNewTab = currentKeys.difference(_activeTabs).isNotEmpty;
+      final wasEmpty = _activeTabs.isEmpty;
+      _activeTabs
+        ..clear()
+        ..addAll(currentKeys);
+
+      if (hasNewTab ||
+          wasEmpty ||
+          _remainingSeconds <= 0 ||
+          _timer == null ||
+          !_timer!.isActive) {
+        if (!PlanModel.instance.isPaidPlan) {
+          _startCountdown();
+        }
+      }
+    });
   }
 
   void _startCountdown() {
@@ -707,6 +739,8 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
 
   void _onTimeExpired() {
     _timer?.cancel();
+    _remainingSeconds = 300;
+    _activeTabs.clear();
     if (!mounted) return;
     if (widget.onExpire != null) {
       widget.onExpire!();
@@ -716,12 +750,16 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
       for (final key in tabKeys) {
         widget.tabController.closeBy(key);
       }
+      try {
+        widget.tabController.clear();
+      } catch (_) {}
     }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _tabSubscription?.cancel();
     super.dispose();
   }
 
