@@ -112,6 +112,8 @@ class PlansDialog extends StatefulWidget {
 class _PlansDialogState extends State<PlansDialog> {
   final TextEditingController _credentialController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  // Fixed placeholder: the real key is never shown, copied or re-loaded in the UI.
+  static const String _maskedKey = '••••••••••••••••••••';
   String _statusMessage = '';
   bool _isSuccess = false;
   bool _isActivating = false;
@@ -122,7 +124,7 @@ class _PlansDialogState extends State<PlansDialog> {
     super.initState();
     PlanModel.instance.init();
     if (PlanModel.instance.isPaidPlan) {
-      _credentialController.text = PlanModel.instance.licenseKey.value;
+      _credentialController.text = _maskedKey;
     }
   }
 
@@ -164,7 +166,7 @@ class _PlansDialogState extends State<PlansDialog> {
       _isActivating = false;
       _isSuccess = success;
       if (success) {
-        _credentialController.text = PlanModel.instance.licenseKey.value;
+        _credentialController.text = _maskedKey;
         final isTeam = PlanModel.instance.planType.value == PlanType.proTeam;
         _statusMessage = isTeam
             ? '¡Plan Pro Equipo activado! 10 máquinas simultáneas, 5 usuarios y tiempo ilimitado.'
@@ -666,6 +668,12 @@ class _PlansDialogState extends State<PlansDialog> {
                       child: TextField(
                         controller: _credentialController,
                         focusNode: _focusNode,
+                        obscureText: true,
+                        obscuringCharacter: '•',
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        readOnly: isPaid,
+                        enableInteractiveSelection: !isPaid,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
@@ -703,7 +711,7 @@ class _PlansDialogState extends State<PlansDialog> {
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    onPressed: _isActivating
+                    onPressed: (_isActivating || isPaid)
                         ? null
                         : () => _activateCredential(_credentialController.text),
                     icon: _isActivating

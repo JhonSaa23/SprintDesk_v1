@@ -1392,7 +1392,7 @@ class NewSessionChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Material(
-        color: MyTheme.accent.withOpacity(0.18),
+        color: const Color(0xFF10B981).withOpacity(0.18),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(color: Colors.white.withOpacity(0.16)),
@@ -1415,7 +1415,8 @@ class NewSessionChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.add_rounded, size: 16, color: MyTheme.accent),
+                const Icon(Icons.add_rounded,
+                    size: 16, color: Color(0xFF10B981)),
                 const SizedBox(width: 4),
                 Text(translate('New Connection'),
                     style: const TextStyle(

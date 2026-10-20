@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
+import 'package:flutter_hbb/common/widgets/autocomplete.dart';
+import 'package:flutter_hbb/models/peer_model.dart';
 
 class HeaderConnectBar extends StatefulWidget {
   const HeaderConnectBar({Key? key}) : super(key: key);
@@ -12,9 +14,24 @@ class HeaderConnectBar extends StatefulWidget {
 class _HeaderConnectBarState extends State<HeaderConnectBar> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
+  final AllPeersLoader _allPeersLoader = AllPeersLoader();
+  Iterable<Peer> _opts = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _allPeersLoader.init(setState);
+    _allPeersLoader.getAllPeers(force: true);
+    _focus.addListener(() {
+      if (_focus.hasFocus) {
+        _allPeersLoader.getAllPeers(force: true);
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _allPeersLoader.clear();
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -22,20 +39,64 @@ class _HeaderConnectBarState extends State<HeaderConnectBar> {
 
   String get _id => _controller.text.replaceAll(' ', '');
 
+  bool _matches(Peer p, String q) =>
+      p.id.toLowerCase().contains(q) ||
+      p.alias.toLowerCase().contains(q) ||
+      p.hostname.toLowerCase().contains(q) ||
+      p.username.toLowerCase().contains(q);
+
+  /// Turns what the user typed into a remote ID. Numbers are used as-is;
+  /// text is resolved against saved machines (alias/hostname/user).
+  String _resolveId() {
+    final raw = _controller.text.trim();
+    final compact = raw.replaceAll(' ', '');
+    if (compact.isEmpty || int.tryParse(compact) != null) return compact;
+    final q = raw.toLowerCase();
+    final peers = _allPeersLoader.peers;
+    for (final p in peers) {
+      if (p.alias.toLowerCase() == q || p.hostname.toLowerCase() == q) return p.id;
+    }
+    for (final p in peers) {
+      if (_matches(p, q)) return p.id;
+    }
+    return compact;
+  }
+
   void _connect(
       {bool isFileTransfer = false,
       bool isViewCamera = false,
       bool isTerminal = false,
       bool isTcpTunneling = false}) {
-    if (_id.isEmpty) {
+    final id = _resolveId();
+    if (id.isEmpty) {
       _focus.requestFocus();
       return;
     }
-    connect(context, _id,
+    connect(context, id,
         isFileTransfer: isFileTransfer,
         isViewCamera: isViewCamera,
         isTerminal: isTerminal,
         isTcpTunneling: isTcpTunneling);
+  }
+
+  Iterable<Peer> _buildOptions(TextEditingValue value) {
+    final peers = _allPeersLoader.peers;
+    final text = value.text.trim().toLowerCase();
+    if (text.isEmpty) {
+      final all = List<Peer>.from(peers);
+      all.sort((a, b) {
+        final aHasName = a.alias.isNotEmpty || a.hostname.isNotEmpty;
+        final bHasName = b.alias.isNotEmpty || b.hostname.isNotEmpty;
+        return (aHasName ? 0 : 1).compareTo(bHasName ? 0 : 1);
+      });
+      _opts = all.take(50).toList();
+    } else {
+      final compact = text.replaceAll(' ', '');
+      final q = int.tryParse(compact) != null ? compact : text;
+      _opts = peers.where((p) => _matches(p, q)).take(50).toList();
+    }
+    if (_opts.isNotEmpty) _allPeersLoader.queryOnlines(_opts);
+    return _opts;
   }
 
   @override
@@ -45,12 +106,61 @@ class _HeaderConnectBarState extends State<HeaderConnectBar> {
       borderSide: BorderSide(color: Colors.white.withOpacity(0.12)),
     );
     return Container(
-      constraints: const BoxConstraints(maxWidth: 420, minWidth: 180),
+      constraints: const BoxConstraints(maxWidth: 420, minWidth: 100),
       height: 42,
       margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
-      child: TextField(
-        controller: _controller,
+      child: RawAutocomplete<Peer>(
         focusNode: _focus,
+        textEditingController: _controller,
+        optionsBuilder: _buildOptions,
+        displayStringForOption: (p) => formatID(p.id),
+        onSelected: (p) {
+          _controller.text = formatID(p.id);
+          setState(() {});
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          final list = options.toList();
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Material(
+                elevation: 6,
+                color: Theme.of(context).colorScheme.background,
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 380,
+                    maxHeight: (list.length * 48.0).clamp(0.0, 260.0),
+                  ),
+                  child: ListView(
+                    padding: const EdgeInsets.only(top: 5),
+                    shrinkWrap: true,
+                    children: list
+                        .map((p) => AutocompletePeerTile(
+                            onSelect: () => onSelected(p), peer: p))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+          return _buildField(border, controller, focusNode);
+        },
+      ),
+    );
+  }
+
+  Widget _buildField(OutlineInputBorder border, TextEditingController controller,
+      FocusNode focusNode) {
+    return SizedBox(
+      height: 42,
+      child: TextField(
+        controller: controller,
+        focusNode: focusNode,
         autocorrect: false,
         enableSuggestions: false,
         maxLines: 1,

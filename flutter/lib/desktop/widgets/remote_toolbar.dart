@@ -326,8 +326,8 @@ class ToolbarState {
 }
 
 class _ToolbarTheme {
-  static const Color blueColor = MyTheme.button;
-  static const Color hoverBlueColor = MyTheme.accent;
+  static const Color blueColor = Color(0xFF10B981);
+  static const Color hoverBlueColor = Color(0xFF059669);
   static Color inactiveColor = Colors.grey[800]!;
   static Color hoverInactiveColor = Colors.grey[850]!;
 
@@ -337,10 +337,10 @@ class _ToolbarTheme {
   static const double height = 20.0;
   static const double dividerHeight = 12.0;
 
-  static const double buttonSize = 32;
-  static const double buttonHMargin = 2;
-  static const double buttonVMargin = 2;
-  static const double iconRadius = 8;
+  static const double buttonSize = 26;
+  static const double buttonHMargin = 3;
+  static const double buttonVMargin = 3;
+  static const double iconRadius = 9;
   static const double elevation = 3;
 
   static double dividerSpaceToAction = isWindows ? 8 : 14;
@@ -386,6 +386,32 @@ class _ToolbarTheme {
       child: child,
     );
   }
+}
+
+/// Nicer rounded glyphs for the toolbar buttons. Returns null when the asset
+/// has no mapping so callers keep using the original SVG.
+Widget? _toolbarGlyph(String asset) {
+  const map = <String, IconData>{
+    'assets/actions.svg': Icons.bolt_rounded,
+    'assets/display.svg': Icons.desktop_windows_rounded,
+    'assets/keyboard_mouse.svg': Icons.keyboard_rounded,
+    'assets/chat.svg': Icons.chat_bubble_rounded,
+    'assets/message_24dp_5F6368.svg': Icons.chat_bubble_outline_rounded,
+    'assets/voice_call.svg': Icons.call_rounded,
+    'assets/call_wait.svg': Icons.phone_in_talk_rounded,
+    'assets/rec.svg': Icons.fiber_manual_record_rounded,
+    'assets/close.svg': Icons.close_rounded,
+    'assets/pinned.svg': Icons.push_pin_rounded,
+    'assets/unpinned.svg': Icons.push_pin_outlined,
+    'assets/actions_mobile.svg': Icons.touch_app_rounded,
+  };
+  final data = map[asset];
+  if (data == null) return null;
+  return SizedBox(
+    width: _ToolbarTheme.buttonSize,
+    height: _ToolbarTheme.buttonSize,
+    child: Icon(data, color: Colors.white, size: _ToolbarTheme.buttonSize * 0.64),
+  );
 }
 
 typedef DismissFunc = void Function();
@@ -2157,7 +2183,7 @@ class _RectValueThumbShape extends SliderComponentShape {
     );
     final Color? evaluatedColor = colorTween.evaluate(enableAnimation);
     final Color? thumbColor = sliderTheme.thumbColor;
-    final Color fillColor = evaluatedColor ?? thumbColor ?? Colors.blueAccent;
+    final Color fillColor = evaluatedColor ?? thumbColor ?? const Color(0xFF10B981);
 
     final RRect rrect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: center, width: width, height: height),
@@ -3032,6 +3058,7 @@ class _IconMenuButtonState extends State<_IconMenuButton> {
   Widget build(BuildContext context) {
     assert(widget.assetName != null || widget.icon != null);
     final icon = widget.icon ??
+        _toolbarGlyph(widget.assetName!) ??
         SvgPicture.asset(
           widget.assetName!,
           colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
@@ -3117,6 +3144,7 @@ class _IconSubmenuButtonState extends State<_IconSubmenuButton> {
   Widget build(BuildContext context) {
     assert(widget.svg != null || widget.icon != null);
     final icon = widget.icon ??
+        _toolbarGlyph(widget.svg!) ??
         SvgPicture.asset(
           widget.svg!,
           colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),

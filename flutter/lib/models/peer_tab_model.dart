@@ -41,10 +41,10 @@ class PeerTabModel with ChangeNotifier {
     true,
     true,
     !isWeb && bind.mainGetLocalOption(key: "disable-discovery-panel") != "Y",
-    !(bind.isDisableAb() || bind.isDisableAccount()),
-    !(bind.isDisableGroupPanel() || bind.isDisableAccount()),
+    false,
+    false,
   ]);
-  final List<bool> _isVisible = List.filled(maxTabCount, true, growable: false);
+  final List<bool> _isVisible = [true, true, true, false, false];
   List<bool> get isVisibleEnabled => () {
         final list = _isVisible.toList();
         for (int i = 0; i < maxTabCount; i++) {
@@ -84,6 +84,8 @@ class PeerTabModel with ChangeNotifier {
     } catch (e) {
       debugPrint("failed to get peer tab visible list:$e");
     }
+    _isVisible[PeerTabIndex.ab.index] = false;
+    _isVisible[PeerTabIndex.group.index] = false;
     // order
     try {
       final option = bind.getLocalFlutterOption(k: kOptionPeerTabOrder);

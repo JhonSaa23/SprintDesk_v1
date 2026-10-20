@@ -375,7 +375,18 @@ class _ConnectionPageState extends State<ConnectionPage>
                     child: RawAutocomplete<Peer>(
                   optionsBuilder: (TextEditingValue textEditingValue) {
                     if (textEditingValue.text == '') {
-                      _autocompleteOpts = const Iterable<Peer>.empty();
+                      // Behave like a select: list known machines (named
+                      // ones first) so they can be picked without typing.
+                      final all = List<Peer>.from(_allPeersLoader.peers);
+                      all.sort((a, b) {
+                        final an = a.alias.isNotEmpty ? 0 : 1;
+                        final bn = b.alias.isNotEmpty ? 0 : 1;
+                        return an != bn ? an.compareTo(bn) : 0;
+                      });
+                      _autocompleteOpts = all.take(30).toList();
+                      if (_autocompleteOpts.isNotEmpty) {
+                        _allPeersLoader.queryOnlines(_autocompleteOpts);
+                      }
                     } else if (_allPeersLoader.peers.isEmpty &&
                         !_allPeersLoader.isPeersLoaded) {
                       Peer emptyPeer = Peer(

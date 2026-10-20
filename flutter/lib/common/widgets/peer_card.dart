@@ -40,6 +40,36 @@ File? getPeerThumbnail(String peerId) {
   return null;
 }
 
+/// Ensures the thumbnails folder exists and returns the target file path.
+Future<String> prepareThumbnailPath(String peerId) async {
+  final path = getThumbnailPath(peerId);
+  final dir = Directory(File(path).parent.path);
+  if (!dir.existsSync()) {
+    dir.createSync(recursive: true);
+  }
+  return path;
+}
+
+final Map<String, MapEntry<int, Uint8List>> _thumbnailBytesCache = {};
+
+/// Thumbnail bytes cached by modification time, so a new capture replaces
+/// the old image (Image.file would keep serving the stale cached one).
+Uint8List? getPeerThumbnailBytes(String peerId) {
+  try {
+    final file = File(getThumbnailPath(peerId));
+    if (!file.existsSync()) return null;
+    final mtime = file.lastModifiedSync().millisecondsSinceEpoch;
+    final cached = _thumbnailBytesCache[peerId];
+    if (cached != null && cached.key == mtime) return cached.value;
+    final bytes = file.readAsBytesSync();
+    if (bytes.isEmpty) return null;
+    _thumbnailBytesCache[peerId] = MapEntry(mtime, bytes);
+    return bytes;
+  } catch (_) {
+    return null;
+  }
+}
+
 typedef PopupMenuEntryBuilder = Future<List<mod_menu.PopupMenuEntry<String>>>
     Function(BuildContext);
 
@@ -322,8 +352,8 @@ class _PeerCardState extends State<_PeerCard>
       margin: EdgeInsets.zero,
       child: Obx(
         () {
-          final thumbnailFile = getPeerThumbnail(peer.id);
-          final hasThumbnail = thumbnailFile != null;
+          final thumbnailBytes = getPeerThumbnailBytes(peer.id);
+          final hasThumbnail = thumbnailBytes != null;
 
           String defaultWallpaper;
           final p = peer.platform.toLowerCase();
@@ -338,7 +368,6 @@ class _PeerCardState extends State<_PeerCard>
 
           final statusColor =
               peer.online ? const Color(0xFF00FF66) : const Color(0xFFFF3333);
-          final isFav = widget.tab == PeerTabIndex.fav;
 
           return Container(
             foregroundDecoration: deco.value,
@@ -360,11 +389,18 @@ class _PeerCardState extends State<_PeerCard>
                 children: [
                   // 1. Wallpaper background
                   if (hasThumbnail)
-                    Image.file(
-                      thumbnailFile,
+                    Image.memory(
+                      thumbnailBytes,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: double.infinity,
+                      gaplessPlayback: true,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        defaultWallpaper,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
                     )
                   else
                     Image.asset(
@@ -399,34 +435,48 @@ class _PeerCardState extends State<_PeerCard>
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () async {
-                        final favs = (await bind.mainGetFav()).toList();
-                        if (favs.contains(peer.id)) {
-                          favs.remove(peer.id);
-                        } else {
-                          favs.add(peer.id);
-                        }
-                        await bind.mainStoreFav(favs: favs);
-                        await bind.mainLoadFavPeers();
-                        final peerTabModel =
-                            Provider.of<PeerTabModel>(context, listen: false);
-                        peerTabModel.setCurrentTabCachedPeers([]);
+                    child: AnimatedBuilder(
+                      animation: gFFI.favoritePeersModel,
+                      builder: (context, _) {
+                        final isFavorite = gFFI.favoritePeersModel.peers
+                            .any((p) => p.id == peer.id);
+                        return Tooltip(
+                          message: isFavorite
+                              ? translate('Remove from Favorites')
+                              : translate('Add to Favorites'),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              final favs = (await bind.mainGetFav()).toList();
+                              if (favs.contains(peer.id)) {
+                                favs.remove(peer.id);
+                              } else {
+                                favs.add(peer.id);
+                              }
+                              await bind.mainStoreFav(favs: favs);
+                              await bind.mainLoadFavPeers();
+                              final peerTabModel =
+                                  Provider.of<PeerTabModel>(context, listen: false);
+                              peerTabModel.setCurrentTabCachedPeers([]);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Icon(
+                                isFavorite
+                                    ? Icons.star_rounded
+                                    : Icons.star_outline_rounded,
+                                size: 19,
+                                color: isFavorite
+                                    ? const Color(0xFFFFD700)
+                                    : Colors.white.withOpacity(0.85),
+                                shadows: const [
+                                  Shadow(color: Colors.black54, blurRadius: 4),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Icon(
-                          isFav ? Icons.star_rounded : Icons.star_outline_rounded,
-                          size: 19,
-                          color: isFav
-                              ? const Color(0xFFFFD700)
-                              : Colors.white.withOpacity(0.85),
-                          shadows: const [
-                            Shadow(color: Colors.black54, blurRadius: 4),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
 

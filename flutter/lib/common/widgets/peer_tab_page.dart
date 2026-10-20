@@ -86,6 +86,9 @@ class _PeerTabPageState extends State<PeerTabPage>
     }
     hideAbTagsPanel.value =
         bind.mainGetLocalOption(key: kOptionHideAbTagsPanel) == 'Y';
+    bind.mainLoadFavPeers();
+    bind.mainLoadLanPeers();
+    bind.mainDiscover();
   }
 
   Future<void> handleTabSelection(int tabIndex) async {

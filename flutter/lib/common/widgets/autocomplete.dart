@@ -14,6 +14,7 @@ List<Peer> mergeAutocompletePeers({
   Iterable<Peer> groupPeers = const [],
   Iterable<Peer> lanPeers = const [],
   Iterable<Peer> recentPeers = const [],
+  Iterable<Peer> favPeers = const [],
   Iterable<String> restRecentPeerIds = const [],
 }) {
   final combinedPeers = <String, Peer>{};
@@ -25,21 +26,38 @@ List<Peer> mergeAutocompletePeers({
     final existingPeer = combinedPeers[peer.id];
     if (existingPeer == null) {
       combinedPeers[peer.id] = Peer.copy(peer);
-    } else if (peer.online) {
-      existingPeer.online = true;
+    } else {
+      if (peer.online) {
+        existingPeer.online = true;
+      }
+      if (existingPeer.alias.isEmpty && peer.alias.isNotEmpty) {
+        existingPeer.alias = peer.alias;
+      }
+      if (existingPeer.hostname.isEmpty && peer.hostname.isNotEmpty) {
+        existingPeer.hostname = peer.hostname;
+      }
+      if (existingPeer.username.isEmpty && peer.username.isNotEmpty) {
+        existingPeer.username = peer.username;
+      }
+      if (existingPeer.platform.isEmpty && peer.platform.isNotEmpty) {
+        existingPeer.platform = peer.platform;
+      }
     }
   }
 
-  for (final peer in addressBookPeers) {
+  for (final peer in favPeers) {
     addPeer(peer);
   }
-  for (final peer in groupPeers) {
+  for (final peer in recentPeers) {
     addPeer(peer);
   }
   for (final peer in lanPeers) {
     addPeer(peer);
   }
-  for (final peer in recentPeers) {
+  for (final peer in addressBookPeers) {
+    addPeer(peer);
+  }
+  for (final peer in groupPeers) {
     addPeer(peer);
   }
   for (final id in restRecentPeerIds) {
@@ -131,6 +149,7 @@ class AllPeersLoader {
     _setState = setState;
     _isCleared = false;
     gFFI.recentPeersModel.addListener(_mergeAllPeers);
+    gFFI.favoritePeersModel.addListener(_mergeAllPeers);
     gFFI.lanPeersModel.addListener(_mergeAllPeers);
     gFFI.abModel.addPeerUpdateListener(_listenerKey, _mergeAllPeers);
     gFFI.groupModel.addPeerUpdateListener(_listenerKey, _mergeAllPeers);
@@ -142,6 +161,7 @@ class AllPeersLoader {
 
   void clear() {
     gFFI.recentPeersModel.removeListener(_mergeAllPeers);
+    gFFI.favoritePeersModel.removeListener(_mergeAllPeers);
     gFFI.lanPeersModel.removeListener(_mergeAllPeers);
     gFFI.abModel.removePeerUpdateListener(_listenerKey);
     gFFI.groupModel.removePeerUpdateListener(_listenerKey);
@@ -152,20 +172,16 @@ class AllPeersLoader {
     _isCleared = true;
   }
 
-  Future<void> getAllPeers() async {
-    if (!needLoad) {
+  Future<void> getAllPeers({bool force = false}) async {
+    if (!force && !needLoad) {
       return;
     }
     _isPeersLoading = true;
 
-    if (gFFI.recentPeersModel.peers.isEmpty) {
-      bind.mainLoadRecentPeers();
-    }
-    if (gFFI.lanPeersModel.peers.isEmpty) {
-      bind.mainLoadLanPeers();
-    }
-    // No need to care about peers from abModel, and group model.
-    // Because they will pull data in `refreshCurrentUser()` on startup.
+    bind.mainLoadRecentPeers();
+    bind.mainLoadFavPeers();
+    bind.mainLoadLanPeers();
+    bind.mainDiscover();
 
     final startTime = DateTime.now();
     _mergeAllPeers();
@@ -184,6 +200,7 @@ class AllPeersLoader {
       groupPeers: gFFI.groupModel.peers,
       lanPeers: gFFI.lanPeersModel.peers,
       recentPeers: gFFI.recentPeersModel.peers,
+      favPeers: gFFI.favoritePeersModel.peers,
       restRecentPeerIds: gFFI.recentPeersModel.restPeerIds,
     );
     _applyLastOnlineState(peers);
@@ -362,17 +379,18 @@ class AutocompletePeerTileState extends State<AutocompletePeerTile> {
                                                         8, widget.peer.online),
                                                     Expanded(
                                                         child: Text(
-                                                      widget.peer.alias.isEmpty
-                                                          ? formatID(
-                                                              widget.peer.id)
-                                                          : widget.peer.alias,
+                                                      widget.peer.alias.isNotEmpty
+                                                          ? widget.peer.alias
+                                                          : (widget.peer.hostname.isNotEmpty
+                                                              ? widget.peer.hostname
+                                                              : formatID(widget.peer.id)),
                                                       overflow:
                                                           TextOverflow.ellipsis,
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .titleSmall,
                                                     )),
-                                                    widget.peer.alias.isNotEmpty
+                                                    (widget.peer.alias.isNotEmpty || widget.peer.hostname.isNotEmpty)
                                                         ? Padding(
                                                             padding:
                                                                 const EdgeInsets

@@ -172,7 +172,9 @@ class _ConnectionTabPageState extends State<ConnectionTabPage> {
             const NewSessionChip(),
           ],
         ),
-        selectedBorderColor: MyTheme.accent,
+        selectedBorderColor: const Color(0xFF10B981),
+        selectedTabBackgroundColor:
+            const Color(0xFF10B981).withOpacity(0.16),
         pageViewBuilder: (pageView) => pageView,
         labelGetter: DesktopTab.tablabelGetter,
         tabBuilder: (key, icon, label, themeConf) => Obx(() {

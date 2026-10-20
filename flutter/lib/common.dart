@@ -3333,19 +3333,27 @@ Widget buildErrorBanner(BuildContext context,
 }
 
 String getDesktopTabLabel(String peerId, String alias) {
-  String label = alias.isEmpty ? peerId : alias;
+  // Prefer the user-assigned name, then the machine's hostname; only fall
+  // back to the numeric ID when neither is known.
+  String label = alias;
+  String hostname = '';
   try {
     String peer = bind.mainGetPeerSync(id: peerId);
     Map<String, dynamic> config = jsonDecode(peer);
-    if (config['info']['hostname'] is String) {
-      String hostname = config['info']['hostname'];
-      if (hostname.isNotEmpty &&
-          !label.toLowerCase().contains(hostname.toLowerCase())) {
-        label += "@$hostname";
+    if (label.isEmpty) {
+      final opts = config['options'];
+      if (opts is Map && opts['alias'] is String) {
+        label = opts['alias'];
       }
+    }
+    if (config['info']['hostname'] is String) {
+      hostname = config['info']['hostname'];
     }
   } catch (e) {
     debugPrint("Failed to get hostname:$e");
+  }
+  if (label.isEmpty) {
+    label = hostname.isNotEmpty ? hostname : peerId;
   }
   return label;
 }

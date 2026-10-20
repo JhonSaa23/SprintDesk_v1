@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_hbb/common/widgets/peers_view.dart';
+import 'package:flutter_hbb/common/widgets/peer_card.dart'
+    show prepareThumbnailPath;
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/ab_model.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
@@ -134,6 +136,8 @@ class FfiModel with ChangeNotifier {
   bool isRefreshing = false;
 
   Timer? timerScreenshot;
+  // True while a silent screenshot for the peer-card thumbnail is in flight.
+  bool autoThumbnailPending = false;
 
   Rect? get rect => _rect;
   bool get isOriginalResolutionSet =>
@@ -480,6 +484,22 @@ class FfiModel with ChangeNotifier {
     timerScreenshot?.cancel();
     timerScreenshot = null;
     final msg = evt['msg'] ?? '';
+    if (autoThumbnailPending) {
+      // Silent capture used as the peer card wallpaper: save, no dialogs.
+      autoThumbnailPending = false;
+      if (msg.isEmpty) {
+        () async {
+          try {
+            final path = await prepareThumbnailPath(peerId);
+            await bind.sessionHandleScreenshot(
+                sessionId: sessionId, action: '0:$path');
+          } catch (e) {
+            debugPrint('save thumbnail failed: $e');
+          }
+        }();
+      }
+      return;
+    }
     final msgBoxType = 'custom-nook-nocancel-hasclose';
     final msgBoxTitle = 'Take screenshot';
     final dialogManager = parent.target!.dialogManager;
@@ -4323,6 +4343,7 @@ class FFI {
       ffiModel.cancelPendingRestoreTimer();
       ffiModel.resetRestartReconnectState();
       dialogManager.dismissAll();
+      _scheduleThumbnailCapture();
       try {
         await bind.sessionSetViewStyle(
             sessionId: sessionId, value: kRemoteViewStyleAdaptive);
@@ -4337,6 +4358,30 @@ class FFI {
       }
     }
   }
+  /// Takes one silent screenshot a few seconds after the first frame so the
+  /// peer card can show the remote machine's wallpaper.
+  void _scheduleThumbnailCapture() {
+    if (!(isDesktop || isWebDesktop) || isWeb) return;
+    Future.delayed(const Duration(seconds: 4), () {
+      try {
+        if (closed || ffiModel.autoThumbnailPending) return;
+        final supported = bind.sessionGetCommonSync(
+            sessionId: sessionId, key: 'is_screenshot_supported', param: '');
+        if (supported != 'true') return;
+        final display = ffiModel.pi.currentDisplay;
+        if (display == kAllDisplayValue) return;
+        ffiModel.autoThumbnailPending = true;
+        bind.sessionTakeScreenshot(sessionId: sessionId, display: display);
+        // Give up if the peer never answers.
+        Future.delayed(const Duration(seconds: 20), () {
+          ffiModel.autoThumbnailPending = false;
+        });
+      } catch (e) {
+        debugPrint('thumbnail capture failed: $e');
+      }
+    });
+  }
+
 
   void _applyPendingMonitorRestore() {
     final restore = ffiModel.pendingMonitorRestore;
