@@ -168,12 +168,15 @@ class _PlansDialogState extends State<PlansDialog> {
       if (success) {
         _credentialController.text = _maskedKey;
         final isTeam = PlanModel.instance.planType.value == PlanType.proTeam;
-        _statusMessage = isTeam
-            ? '¡Plan Pro Equipo activado! 10 máquinas simultáneas, 5 usuarios y tiempo ilimitado.'
-            : '¡Plan Individual activado! 3 máquinas simultáneas, 1 usuario y tiempo ilimitado.';
+        _statusMessage = PlanModel.instance.isTrial.value
+            ? '¡Licencia gratuita activada! ${PlanModel.instance.trialRemainingText}; termina el ${PlanModel.instance.trialExpiryLabel} al finalizar el día.'
+            : isTeam
+                ? '¡Plan Pro Equipo activado! 10 máquinas simultáneas, 5 usuarios y tiempo ilimitado.'
+                : '¡Plan Individual activado! 3 máquinas simultáneas, 1 usuario y tiempo ilimitado.';
       } else {
-        _statusMessage =
-            'Credencial no encontrada o no válida. Verifica con el administrador de tu equipo.';
+        _statusMessage = PlanModel.instance.lastActivationError.isNotEmpty
+            ? PlanModel.instance.lastActivationError
+            : 'Credencial no encontrada o no válida. Verifica con el administrador de tu equipo.';
       }
     });
   }
@@ -614,7 +617,9 @@ class _PlansDialogState extends State<PlansDialog> {
                 const SizedBox(width: 8),
                 Text(
                   isPaid
-                      ? "${plan.planName} Activo"
+                      ? (plan.isTrial.value
+                          ? "Licencia gratuita activa"
+                          : "${plan.planName} Activo")
                       : "Si ya perteneces a un equipo, pega la credencial aquí",
                   style: const TextStyle(
                     fontSize: 14,
@@ -641,7 +646,9 @@ class _PlansDialogState extends State<PlansDialog> {
             const SizedBox(height: 6),
             Text(
               isPaid
-                  ? "Tu equipo está habilitado con ${plan.maxConcurrentSessions} conexiones simultáneas y tiempo de sesión ilimitado."
+                  ? (plan.isTrial.value
+                      ? "${plan.trialRemainingText}. Termina el ${plan.trialExpiryLabel} al finalizar el día. Incluye ${plan.maxConcurrentSessions} conexiones simultáneas."
+                      : "Tu equipo está habilitado con ${plan.maxConcurrentSessions} conexiones simultáneas y tiempo de sesión ilimitado.")
                   : "Ingresa el token o credencial comercial provisto por tu empresa o generado tras tu compra.",
               style: TextStyle(
                 fontSize: 12,

@@ -795,9 +795,11 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
       if (plan.isPaidPlan) {
         _timer?.cancel();
         final isTeam = plan.planType.value == PlanType.proTeam;
-        final label = isTeam
-            ? "Pro Equipo • 10 Máx • Ilimitado"
-            : "Individual • 3 Máx • Ilimitado";
+        final label = plan.isTrial.value
+            ? "Licencia gratuita • ${plan.trialDaysLeft <= 0 ? 'Último día' : '${plan.trialDaysLeft} días restantes'} • ${plan.maxConcurrentSessions} Máx"
+            : isTeam
+                ? "Pro Equipo • 10 Máx • Ilimitado"
+                : "Individual • 3 Máx • Ilimitado";
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Container(
@@ -811,8 +813,12 @@ class _SessionCountdownBadgeState extends State<SessionCountdownBadge> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.all_inclusive_rounded,
-                    size: 13, color: Color(0xFF10B981)),
+                Icon(
+                    plan.isTrial.value
+                        ? Icons.timer_outlined
+                        : Icons.all_inclusive_rounded,
+                    size: 13,
+                    color: const Color(0xFF10B981)),
                 const SizedBox(width: 4),
                 Text(
                   label,

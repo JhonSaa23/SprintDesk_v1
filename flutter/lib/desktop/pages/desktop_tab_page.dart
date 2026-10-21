@@ -211,9 +211,11 @@ class UpgradePlanHeaderChip extends StatelessWidget {
       final plan = PlanModel.instance;
       final isPaid = plan.isPaidPlan;
       final isTeam = plan.planType.value == PlanType.proTeam;
-      final label = isPaid
-          ? (isTeam ? "Plan Pro Equipo" : "Plan Individual")
-          : "Actualizar planes";
+      final label = plan.isTrial.value
+          ? "Licencia gratuita • ${plan.trialDaysLeft <= 0 ? 'Último día' : '${plan.trialDaysLeft} días'}"
+          : isPaid
+              ? (isTeam ? "Plan Pro Equipo" : "Plan Individual")
+              : "Actualizar planes";
       return Padding(
         padding: const EdgeInsets.only(right: 8),
         child: InkWell(

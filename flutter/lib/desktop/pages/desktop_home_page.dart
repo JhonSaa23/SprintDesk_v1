@@ -648,15 +648,25 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       final planType = plan.planType.value;
       final isTeam = planType == PlanType.proTeam;
 
-      final title = isPaid
-          ? (isTeam ? "Plan Pro Equipo Activo" : "Plan Individual Activo")
-          : "Actualizar planes";
-      final badgeText = isPaid ? (isTeam ? "EQUIPO" : "INDIVIDUAL") : "GRATIS";
-      final description = isPaid
-          ? (isTeam
-              ? "10 máquinas simultáneas en paralelo, 5 usuarios y tiempo ilimitado."
-              : "3 máquinas simultáneas en paralelo y tiempo de sesión ilimitado.")
-          : "Individual (\$11.90/mes, 3 máquinas) o Pro Equipo (\$45.90/mes, 10 máquinas y 5 usuarios).";
+      final isTrial = plan.isTrial.value;
+
+      final title = isTrial
+          ? "Licencia gratuita"
+          : isPaid
+              ? (isTeam ? "Plan Pro Equipo Activo" : "Plan Individual Activo")
+              : "Actualizar planes";
+      final badgeText = isTrial
+          ? "PRUEBA"
+          : isPaid
+              ? (isTeam ? "EQUIPO" : "INDIVIDUAL")
+              : "GRATIS";
+      final description = isTrial
+          ? "${plan.trialRemainingText}. Termina el ${plan.trialExpiryLabel} al finalizar el día."
+          : isPaid
+              ? (isTeam
+                  ? "10 máquinas simultáneas en paralelo, 5 usuarios y tiempo ilimitado."
+                  : "3 máquinas simultáneas en paralelo y tiempo de sesión ilimitado.")
+              : "Individual (\$11.90/mes, 3 máquinas) o Pro Equipo (\$45.90/mes, 10 máquinas y 5 usuarios).";
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

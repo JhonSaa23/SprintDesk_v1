@@ -42,6 +42,7 @@ import 'package:vector_math/vector_math.dart' show Vector2;
 import '../common.dart';
 import '../utils/image.dart' as img;
 import '../common/widgets/dialog.dart';
+import '../common/widgets/login.dart' show loginDialog;
 import 'input_model.dart';
 import 'platform_model.dart';
 import 'package:flutter_hbb/utils/scale.dart';
@@ -898,6 +899,17 @@ class FfiModel with ChangeNotifier {
         type, title, text, dialogManager, sessionId, peerId, sessions);
   }
 
+  bool _isLoginRequiredNotice(dynamic title, dynamic text) {
+    if (title is! String || text is! String) return false;
+    final t = text.toLowerCase();
+    return (title == 'Connection Error' || title == 'Error') &&
+        (t.contains('log in before connecting') ||
+            t.contains('login-required') ||
+            t.contains('requires users to log in') ||
+            t.contains('botnet') ||
+            t.contains('please log in first'));
+  }
+
   /// Handle the message box event based on [evt] and [id].
   handleMsgBox(Map<String, dynamic> evt, SessionID sessionId, String peerId) {
     if (parent.target == null) return;
@@ -928,7 +940,16 @@ class FfiModel with ChangeNotifier {
       parent.target?.inputModel.setRelativeMouseMode(false);
     }
 
-    if (type == 're-input-password') {
+    if (_isLoginRequiredNotice(title, text)) {
+      // The server asks for an account login. Never show its (RustDesk branded)
+      // text: open the SprintDesk login and retry once the user is logged in.
+      dialogManager.dismissAll();
+      loginDialog().then((logged) {
+        if (logged == true && parent.target?.closed != true) {
+          reconnect(dialogManager, sessionId, false);
+        }
+      });
+    } else if (type == 're-input-password') {
       wrongPasswordDialog(sessionId, dialogManager, type, title, text);
     } else if (type == 'input-2fa') {
       enter2FaDialog(sessionId, dialogManager);
